@@ -7,5 +7,5 @@ public:
     virtual ~ServerPacket() = default;
     virtual void send(ByteBuf& buffer) = 0;
     virtual void receive(ByteBuf& buffer) = 0;
-    virtual void process() = 0;
+    virtual void process(ClientSession session) = 0;
 };

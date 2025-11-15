@@ -2,18 +2,19 @@
 #include <functional>
 #include <vector>
 
-#include "../../MineWebClient/src/Protocol/Packet.hpp"
+#include "Protocol/ClientSession.hpp"
+#include "Protocol/ServerPacket.hpp"
 
 class Server {
 public:
-    std::function<void(std::vector<uint8_t>)> callback;
+    std::function<void(ClientSession, std::vector<uint8_t>)> callback;
 
     static Server& getInstance() {
         static Server instance;
         return instance;
     }
 
-    void setCallback(std::function<void(std::vector<uint8_t>)> callback);
-    void processPacket(std::vector<uint8_t> data);
-    void sendPacket(Packet* packet);
+    void setCallback(std::function<void(ClientSession, std::vector<uint8_t>)> callback);
+    void processPacket(ClientSession session, std::vector<uint8_t> data);
+    void sendPacket(ClientSession session, ServerPacket* packet);
 };

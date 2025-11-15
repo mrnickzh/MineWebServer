@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../../MineWebClient/src/Protocol/Packet.hpp"
+#include "../ServerPacket.hpp"
 #include "../../Utils/Vec.hpp"
 
-class AddMapObjectServer : public Packet {
+class AddMapObjectServer : public ServerPacket {
 public:
     int id;
     Vec3<float> position;
@@ -20,4 +20,6 @@ public:
         buffer.writeFloat(rotation.y);
         buffer.writeFloat(rotation.z);
     }
+
+    void process(ClientSession session) override {};
 };
