@@ -1,6 +1,5 @@
 #pragma once
 #include <cmath>
-#include <type_traits>
 
 template<typename T>
 class Vec2 {
@@ -9,6 +8,10 @@ public:
 
     Vec2() = default;
     explicit Vec2(T x, T y) : x(x), y(y) {}
+
+    bool operator<(const Vec2<T>& v) const {
+        return std::tie(x, y) < std::tie(v.x, v.y);
+    }
 
     Vec2<T> operator+(const Vec2<T>& v) const {
         return Vec2<T>(x + v.x, y + v.y);
@@ -54,6 +57,10 @@ public:
 
     Vec3() = default;
     explicit Vec3(T x, T y, T z) : x(x), y(y), z(z) {}
+
+    bool operator<(const Vec3<T>& v) const {
+        return std::tie(x, y, z) < std::tie(v.x, v.y, v.z);
+    }
 
     Vec3<T> operator+(const Vec3<T>& v) const {
         return Vec3<T>(x + v.x, y + v.y, z + v.z);

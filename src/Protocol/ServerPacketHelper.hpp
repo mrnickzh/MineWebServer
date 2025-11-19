@@ -32,7 +32,7 @@ namespace ServerPacketHelper {
     }
 
     inline std::vector<uint8_t> encodePacket(ServerPacket* packet) {
-        ByteBuf buffer(1024);
+        ByteBuf buffer(65536);
         int id = getPacketId(packet);
         buffer.writeInt(id);
         packet->send(buffer);
@@ -40,7 +40,7 @@ namespace ServerPacketHelper {
     }
 
     inline ServerPacket* decodePacket(ClientSession session, const std::vector<uint8_t> data) {
-        ByteBuf buffer(1024);
+        ByteBuf buffer(65536);
 
         buffer.fromByteArray(data);
         int id = buffer.readInt();
