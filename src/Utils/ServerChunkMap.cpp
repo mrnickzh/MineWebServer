@@ -12,6 +12,8 @@ void ServerChunkMap::generate() {
     int minid = 0;
     int maxid = 3;
 
+    // srand(time(NULL));
+
     for (int x = 0; x < 8; x++) {
         for (int y = 0; y < 8; y++) {
             for (int z = 0; z < 8; z++) {
