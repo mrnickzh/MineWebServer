@@ -1,5 +1,7 @@
 #include "ServerChunkMap.hpp"
 
+#include <ctime>
+
 void ServerChunkMap::addBlock(Vec3<float> blockPos, std::shared_ptr<Block> block) {
     blocks[blockPos] = block;
 }
@@ -12,7 +14,7 @@ void ServerChunkMap::generate(int genid) {
     int minid = 0;
     int maxid = 3;
 
-    srand(time(NULL));
+    srand(std::time(0));
 
     switch (genid) {
         case -1:
