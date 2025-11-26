@@ -10,5 +10,5 @@ public:
 
     void addBlock(Vec3<float> blockPos, std::shared_ptr<Block> block);
     std::shared_ptr<Block> getBlock(Vec3<float> blockPos);
-    void generate();
+    void generate(int genid);
 };
