@@ -14,7 +14,7 @@ void ServerChunkMap::generate(int genid) {
     int minid = 0;
     int maxid = 3;
 
-    srand(std::time(0));
+    srand((unsigned long long)std::chrono::system_clock::now().time_since_epoch().count());
 
     switch (genid) {
         case -1:
