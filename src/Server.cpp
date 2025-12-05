@@ -7,18 +7,20 @@
 #include "Protocol/Packets/GenerateChunkServer.hpp"
 #include "Protocol/Packets/HandShakePacketServer.hpp"
 
-void Server::setCallback(std::function<void(ClientSession, std::vector<uint8_t>)> callback) {
+void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>)> callback) {
     this->callback = std::move(callback);
     ServerPacketHelper::registerPacket(0, []() { return new HandShakePacketServer(); });
-    ServerPacketHelper::registerPacket(1, []() { return new AddMapObjectServer(); });
+    ServerPacketHelper::registerPacket(1, []() { return new EditChunkServer(); });
     ServerPacketHelper::registerPacket(2, []() { return new GenerateChunkServer(); });
+    ServerPacketHelper::registerPacket(3, []() { return new EntityActionServer(); });
+    ServerPacketHelper::registerPacket(4, []() { return new PlayerAuthInputServer(); });
 }
 
-void Server::processPacket(ClientSession session, std::vector<uint8_t> data) {
+void Server::processPacket(ClientSession* session, std::vector<uint8_t> data) {
     ServerPacketHelper::decodePacket(session, data);
 }
 
-void Server::sendPacket(ClientSession session, ServerPacket* packet) {
+void Server::sendPacket(ClientSession* session, ServerPacket* packet) {
     std::vector<uint8_t> data = ServerPacketHelper::encodePacket(packet);
     callback(session, data);
 }

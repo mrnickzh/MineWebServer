@@ -10,7 +10,10 @@ class GenerateChunkServer : public ServerPacket {
         Vec3<float> chunkpos;
 
     void receive(ByteBuf &buffer) override {
-        chunkpos = Vec3<float>(buffer.readFloat(), buffer.readFloat(), buffer.readFloat());
+        float cx = buffer.readFloat();
+        float cy = buffer.readFloat();
+        float cz = buffer.readFloat();
+        chunkpos = Vec3<float>(cx, cy, cz);
     }
     void send(ByteBuf &buffer) override {
         std::shared_ptr<ServerChunkMap> chunkMap = std::make_shared<ServerChunkMap>();
@@ -42,7 +45,7 @@ class GenerateChunkServer : public ServerPacket {
         }
     }
 
-    void process(ClientSession session) override {
+    void process(ClientSession* session) override {
         GenerateChunkServer packet;
         packet.chunkpos = chunkpos;
         Server::getInstance().sendPacket(session, &packet);

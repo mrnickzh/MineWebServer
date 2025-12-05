@@ -39,7 +39,7 @@ namespace ServerPacketHelper {
         return buffer.toByteArray();
     }
 
-    inline ServerPacket* decodePacket(ClientSession session, const std::vector<uint8_t> data) {
+    inline ServerPacket* decodePacket(ClientSession* session, const std::vector<uint8_t> data) {
         ByteBuf buffer(65536);
 
         buffer.fromByteArray(data);
