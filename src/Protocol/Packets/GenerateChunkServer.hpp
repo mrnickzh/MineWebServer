@@ -19,10 +19,7 @@ class GenerateChunkServer : public ServerPacket {
         std::shared_ptr<ServerChunkMap> chunkMap = std::make_shared<ServerChunkMap>();
 
         if (Server::getInstance().chunks.find(chunkpos) == Server::getInstance().chunks.end()) {
-            if (chunkpos.y < 0)
-                chunkMap->generate(-1);
-            else
-                chunkMap->generate(0);
+            chunkMap->generate(chunkpos);
             Server::getInstance().chunks[chunkpos] = chunkMap;
         }
 
