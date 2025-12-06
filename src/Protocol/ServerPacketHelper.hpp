@@ -12,10 +12,12 @@ namespace ServerPacketHelper {
 
     inline int getPacketId(ServerPacket* packet) {
         for (const auto& pair : packetCreators) {
-            if (typeid(*packet) == typeid(*pair.second())) {
-
+            ServerPacket* pkt = pair.second();
+            if (typeid(*packet) == typeid(*pkt)) {
+                delete pkt;
                 return pair.first;
             }
+            delete pkt;
         }
         return -1;
     }
@@ -39,7 +41,7 @@ namespace ServerPacketHelper {
         return buffer.toByteArray();
     }
 
-    inline ServerPacket* decodePacket(ClientSession* session, const std::vector<uint8_t> data) {
+    inline void decodePacket(ClientSession* session, const std::vector<uint8_t> data) {
         ByteBuf buffer(65536);
 
         buffer.fromByteArray(data);
@@ -48,7 +50,7 @@ namespace ServerPacketHelper {
         if (packet) {
             packet->receive(buffer);
             packet->process(session);
+            delete packet;
         }
-        return packet;
     }
 }
