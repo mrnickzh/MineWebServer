@@ -1,5 +1,6 @@
 #pragma once
 
+#include <WorldSaving/RegionRegistory.hpp>
 #include "Server.hpp"
 #include "Protocol/ServerPacket.hpp"
 #include "Utils/ServerChunkMap.hpp"
@@ -19,8 +20,15 @@ class GenerateChunkServer : public ServerPacket {
         std::shared_ptr<ServerChunkMap> chunkMap = std::make_shared<ServerChunkMap>();
 
         if (Server::getInstance().chunks.find(chunkpos) == Server::getInstance().chunks.end()) {
+#ifdef BUILD_TYPE_DEDICATED
+            if(!RegionRegistory::getInstance().load(chunkpos)) {
+                chunkMap->generate(chunkpos);
+                Server::getInstance().chunks[chunkpos] = chunkMap;
+            }
+#elif
             chunkMap->generate(chunkpos);
-            Server::getInstance().chunks[chunkpos] = chunkMap;
+                Server::getInstance().chunks[chunkpos] = chunkMap;
+#endif
         }
 
         chunkMap = Server::getInstance().chunks[chunkpos];

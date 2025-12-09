@@ -3,6 +3,7 @@
 #include <vector>
 #include <stdexcept>
 #include <cstring>
+#include <cstdint>
 
 class ByteBuf {
 private:
