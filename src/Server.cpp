@@ -14,6 +14,10 @@ void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>
     ServerPacketHelper::registerPacket(2, []() { return new GenerateChunkServer(); });
     ServerPacketHelper::registerPacket(3, []() { return new EntityActionServer(); });
     ServerPacketHelper::registerPacket(4, []() { return new PlayerAuthInputServer(); });
+
+    if (!std::filesystem::exists("regions")) {
+        std::filesystem::create_directory("regions");
+    }
 }
 
 void Server::processPacket(ClientSession* session, std::vector<uint8_t> data) {
@@ -24,3 +28,13 @@ void Server::sendPacket(ClientSession* session, ServerPacket* packet) {
     std::vector<uint8_t> data = ServerPacketHelper::encodePacket(packet);
     callback(session, data);
 }
+
+#ifndef BUILD_TYPE_DEDICATED
+void Server::saveWorld() {
+    RegionRegistory::getInstance().exportAll();
+}
+
+void Server::loadWorld() {
+    RegionRegistory::getInstance().importAll();
+}
+#endif

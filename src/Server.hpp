@@ -23,6 +23,11 @@ public:
         return instance;
     }
 
+#ifndef BUILD_TYPE_DEDICATED
+    void saveWorld();
+    void loadWorld();
+#endif
+
     void setCallback(std::function<void(ClientSession*, std::vector<uint8_t>)> callback);
     void processPacket(ClientSession* session, std::vector<uint8_t> data);
     void sendPacket(ClientSession* session, ServerPacket* packet);

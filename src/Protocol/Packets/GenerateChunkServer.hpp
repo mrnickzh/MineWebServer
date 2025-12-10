@@ -19,16 +19,15 @@ class GenerateChunkServer : public ServerPacket {
     void send(ByteBuf &buffer) override {
         std::shared_ptr<ServerChunkMap> chunkMap = std::make_shared<ServerChunkMap>();
 
-        if (Server::getInstance().chunks.find(chunkpos) == Server::getInstance().chunks.end()) {
 #ifdef BUILD_TYPE_DEDICATED
-            if(!RegionRegistory::getInstance().load(chunkpos)) {
-                chunkMap->generate(chunkpos);
-                Server::getInstance().chunks[chunkpos] = chunkMap;
+            if(!RegionRegistory::getInstance().isLoaded(chunkpos)) {
+                RegionRegistory::getInstance().load(chunkpos);
             }
-#elif
-            chunkMap->generate(chunkpos);
-                Server::getInstance().chunks[chunkpos] = chunkMap;
 #endif
+
+        if (Server::getInstance().chunks.find(chunkpos) == Server::getInstance().chunks.end()) {
+            chunkMap->generate(chunkpos);
+            Server::getInstance().chunks[chunkpos] = chunkMap;
         }
 
         chunkMap = Server::getInstance().chunks[chunkpos];

@@ -1,7 +1,3 @@
-//
-// Created by onlym on 12/9/2025.
-//
-
 #pragma once
 
 #include <WorldSaving/RegionFormat/RegionFormat.hpp>
