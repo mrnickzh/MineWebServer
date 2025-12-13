@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "Block.hpp"
+#include "PerlinNoise.hpp"
 
 class ServerChunkMap {
 public:

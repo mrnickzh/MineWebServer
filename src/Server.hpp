@@ -3,12 +3,44 @@
 #include <map>
 #include <vector>
 #include <set>
+#include <random>
 
 #include "Protocol/ClientSession.hpp"
 #include "Protocol/ServerPacket.hpp"
 #include "Utils/Vec.hpp"
 #include "Utils/ServerChunkMap.hpp"
 #include "Utils/ServerEntity.hpp"
+
+
+struct SeedMap {
+public:
+    PerlinNoise* perlinNoiseTerrain;
+    PerlinNoise* perlinNoiseStructures;
+    PerlinNoise* perlinNoiseCaves;
+public:
+    uint32_t initialSeed;
+private:
+    uint64_t seedTerrain;
+    uint64_t seedStructures;
+    uint64_t seedCaves;
+public:
+    SeedMap(uint32_t initialSeed) : initialSeed(initialSeed){
+        std::mt19937 random(initialSeed);
+
+        std::uniform_int_distribution<uint64_t> dist(0, INT64_MAX);
+
+        uint64_t seedTerrain = dist(random);
+        uint64_t seedStructures = dist(random);
+        uint64_t seedCaves = dist(random);
+
+        printf("seed terrain %llu \n", (unsigned long long) seedTerrain);
+        printf("seed caves %llu \n", (unsigned long long) seedCaves);
+
+        perlinNoiseTerrain = new PerlinNoise(seedTerrain);
+        perlinNoiseStructures = new PerlinNoise(seedStructures);
+        perlinNoiseCaves = new PerlinNoise(seedCaves);
+    }
+};
 
 class Server {
 public:
@@ -17,6 +49,12 @@ public:
 
     std::map<Vec3<float>, std::shared_ptr<ServerChunkMap>> chunks;
     std::set<ServerEntity> entities;
+
+    SeedMap* seedMap;
+
+    Server() {
+        seedMap = new SeedMap(32335);
+    }
 
     static Server& getInstance() {
         static Server instance;
