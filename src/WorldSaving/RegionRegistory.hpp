@@ -238,6 +238,7 @@ public:
             // std::cout << rx << " " << ry << " " << rz << std::endl;
 
             rf->load(bb, Vec3<float>(rx, ry, rz));
+            loadedRegions.insert(Vec3<float>(rx, ry, rz));
 
 #ifdef BUILD_TYPE_DEDICATED
             save(Vec3<float>(rx, ry, rz));

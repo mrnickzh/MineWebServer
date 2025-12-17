@@ -35,6 +35,7 @@ void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>
             }
             auto loadedRegions = RegionRegistory::getInstance().loadedRegions;
             printf("Loaded %llu regions\n", loadedRegions.size());
+            printf("Loaded %llu chunks\n", Server::getInstance().chunks.size());
             for (auto& region : loadedRegions) {
                 if (activeRegions.find(region) == activeRegions.end()) {
                     printf("Unloading %f %f %f\n", region.x, region.y, region.z);
