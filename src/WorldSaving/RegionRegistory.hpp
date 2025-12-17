@@ -33,6 +33,20 @@ public:
         formats.push_back(new RegionFormat_V1());
     }
 
+    std::vector<std::string> strSplit(std::string s, std::string del = " ")
+    {
+        int start = 0;
+        int end = s.find(del);
+        std::vector<std::string> list;
+        while (end != -1) {
+            list.push_back(s.substr(start, end - start));
+            start = end + del.size();
+            end = s.find(del, start);
+        }
+        list.push_back(s.substr(start, end - start));
+        return list;
+    };
+
     bool isLoaded(Vec3<float> pos) {
         Vec3<float> currentRegion = Vec3<float>(floor(pos.x / 8.0f), floor(pos.y / 8.0f), floor(pos.z / 8.0f));
         if (loadedRegions.contains(currentRegion)) { return true; }
@@ -51,13 +65,15 @@ public:
 
         std::vector<uint8_t> data = ZLibUtils::compress_data(bb.toByteArray());
         std::ostringstream ss;
-        ss << "/regions/" << (int)currentRegion.x << "-" << (int)currentRegion.y << "-" << (int)currentRegion.z << ".bin";
+#ifdef _MSC_VER
+        ss << "regions\\" << (int)currentRegion.x << "_" << (int)currentRegion.y << "_" << (int)currentRegion.z << ".bin";
+#else
+        ss << "/regions/" << (int)currentRegion.x << "_" << (int)currentRegion.y << "_" << (int)currentRegion.z << ".bin";
+#endif
         std::ofstream file(ss.str(), std::ios::binary);
 
         file.write(reinterpret_cast<const char*>(data.data()), data.size());
         file.close();
-
-        loadedRegions.erase(currentRegion);
     }
 
     bool load(Vec3<float> pos) {
@@ -67,7 +83,11 @@ public:
         loadedRegions.insert(currentRegion);
 
         std::ostringstream ss;
-        ss << "/regions/" << (int)currentRegion.x << "-" << (int)currentRegion.y << "-" << (int)currentRegion.z << ".bin";
+#ifdef _MSC_VER
+        ss << "regions\\" << (int)currentRegion.x << "_" << (int)currentRegion.y << "_" << (int)currentRegion.z << ".bin";
+#else
+        ss << "/regions/" << (int)currentRegion.x << "_" << (int)currentRegion.y << "_" << (int)currentRegion.z << ".bin";
+#endif
         std::string path = ss.str();
 
         if (!std::filesystem::exists(path))
@@ -85,11 +105,11 @@ public:
         ByteBuf bb(8388608);
         bb.fromByteArray(ZLibUtils::decompress_data(buffer));
 
+        int format = bb.readInt();
         float rx = bb.readFloat();
         float ry = bb.readFloat();
         float rz = bb.readFloat();
 
-        int format = bb.readInt();
         RegionFormat* rf = findFormat(format);
         rf->load(bb, currentRegion);
 
@@ -101,7 +121,9 @@ public:
 
     void exportAll() {
         std::set<Vec3<float>> savedRegions;
-        for (auto& chunk : Server::getInstance().chunks) {
+        auto serverChunks = Server::getInstance().chunks;
+
+        for (auto& chunk : serverChunks) {
             Vec3<float> currentRegion = Vec3<float>(floor(chunk.first.x / 8.0f), floor(chunk.first.y / 8.0f), floor(chunk.first.z / 8.0f));
             if (savedRegions.contains(currentRegion)) { continue; }
             // std::cout << currentRegion.x << " " << currentRegion.y << " " << currentRegion.z << std::endl;
@@ -109,21 +131,23 @@ public:
             savedRegions.insert(currentRegion);
         }
 
-        // for (std::filesystem::directory_entry entry : std::filesystem::directory_iterator("/regions")) {
-        //     std::cout << entry.path().string() << std::endl;
-        //     std::cout << entry.file_size() << std::endl;
-        // }
-
         std::vector<uint8_t> worldbuffer;
-        for (auto& currentRegion : savedRegions) {
+        for (std::filesystem::directory_entry entry : std::filesystem::directory_iterator("regions")) {
+            std::vector<std::string> regionCoords = strSplit(entry.path().stem().string(), "_");
+            Vec3<float> currentRegion = Vec3<float>(stof(regionCoords[0]), stof(regionCoords[1]), stof(regionCoords[2]));
+
             std::ostringstream ss;
-            ss << "/regions/" << (int)currentRegion.x << "-" << (int)currentRegion.y << "-" << (int)currentRegion.z << ".bin";
+#ifdef _MSC_VER
+            ss << "regions\\" << (int)currentRegion.x << "_" << (int)currentRegion.y << "_" << (int)currentRegion.z << ".bin";
+#else
+            ss << "/regions/" << (int)currentRegion.x << "_" << (int)currentRegion.y << "_" << (int)currentRegion.z << ".bin";
+#endif
             std::string path = ss.str();
             // std::cout << ss.str() << std::endl;
 
             std::ifstream file(path, std::ifstream::ate | std::ios::binary);
             std::streamsize size = file.tellg();
-            // std::cout << "size: " << size << std::endl;
+            std::cout << "size: " << size << std::endl;
             file.seekg(0);
 
             std::vector<uint8_t> buffer;
@@ -150,8 +174,11 @@ public:
         // std::cout << strdata << std::endl;
 
         std::vector<uint8_t> outbuffer = ZLibUtils::compress_data(worldbuffer);
-
+#ifdef _MSC_VER
+        std::ofstream file("world.mww", std::ios::binary);
+#else
         std::ofstream file("/world.mww", std::ios::binary);
+#endif
         // std::cout << worldbuffer.size() << std::endl;
         // std::cout << outbuffer.size() << std::endl;
         file.write(reinterpret_cast<const char*>(outbuffer.data()), outbuffer.size());
@@ -160,7 +187,12 @@ public:
 
     void importAll() {
         std::ostringstream ss;
-        ss << "/world.mmw";
+#ifdef _MSC_VER
+        ss << "world.mww";
+#else
+        ss << "/world.mww";
+#endif
+
         std::string path = ss.str();
 
         std::ifstream file(path, std::ifstream::ate | std::ios::binary);
@@ -200,16 +232,16 @@ public:
             // std::cout << format << std::endl;
             RegionFormat* rf = findFormat(format);
 
-            int rx = bb.readFloat();
-            int ry = bb.readFloat();
-            int rz = bb.readFloat();
+            float rx = bb.readFloat();
+            float ry = bb.readFloat();
+            float rz = bb.readFloat();
             // std::cout << rx << " " << ry << " " << rz << std::endl;
 
             rf->load(bb, Vec3<float>(rx, ry, rz));
 
-            if(format != FORMAT_VERSION) { // format migration
-                save(Vec3<float>(rx, ry, rz));
-            }
+#ifdef BUILD_TYPE_DEDICATED
+            save(Vec3<float>(rx, ry, rz));
+#endif
         }
     }
 };

@@ -18,6 +18,54 @@ void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>
     if (!std::filesystem::exists("regions")) {
         std::filesystem::create_directory("regions");
     }
+
+#ifdef BUILD_TYPE_DEDICATED
+    std::thread watcher([&]() {
+        int ch = 0;
+        while (true) {
+            std::set<Vec3<float>> activeRegions;
+            for (auto& entity : Server::getInstance().entities) {
+                for (int x = -1; x <= 1; x++) {
+                    for (int y = -1; y <= 1; y++) {
+                        for (int z = -1; z <= 1; z++) {
+                            activeRegions.insert(Vec3<float>(floor(floor(entity.position.x / 8.0f) / 8.0f) + (float)x, floor(floor(entity.position.y / 8.0f) / 8.0f) + (float)y, floor(floor(entity.position.z / 8.0f) / 8.0f) + (float)z));
+                        }
+                    }
+                }
+            }
+            auto loadedRegions = RegionRegistory::getInstance().loadedRegions;
+            printf("Loaded %llu regions\n", loadedRegions.size());
+            for (auto& region : loadedRegions) {
+                if (activeRegions.find(region) == activeRegions.end()) {
+                    printf("Unloading %f %f %f\n", region.x, region.y, region.z);
+                    RegionRegistory::getInstance().save(Vec3<float>(region.x * 8.0f, region.y * 8.0f, region.z * 8.0f));
+                    RegionRegistory::getInstance().loadedRegions.erase(region);
+
+                    for (int x = 0; x < 8; x++) {
+                        for (int y = 0; y < 8; y++) {
+                            for (int z = 0; z < 8; z++) {
+                                Vec3<float> regionChunk = Vec3<float>((region.x * 8.0f) + (float)x, (region.y * 8.0f) + (float)y, (region.z * 8.0f) + (float)z);
+                                if (Server::getInstance().chunks.find(regionChunk) != Server::getInstance().chunks.end()) {
+                                    Server::getInstance().chunks.erase(regionChunk);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (ch >= 20) {
+                printf("Creaing backup...\n");
+                RegionRegistory::getInstance().exportAll();
+                ch = 0;
+            }
+
+            ch++;
+            std::this_thread::sleep_for(std::chrono::seconds(15));
+        }
+    });
+    watcher.detach();
+#endif
 }
 
 void Server::processPacket(ClientSession* session, std::vector<uint8_t> data) {

@@ -38,7 +38,7 @@ void RegionFormat_V1::save(ByteBuf &buffer, Vec3<float> pos) {
     for (int x = 0; x < 8; x++) {
         for (int y = 0; y < 8; y++) {
             for (int z = 0; z < 8; z++) {
-                Vec3<float> regionChunk = Vec3<float>((pos.x * 8.0f) + x, (pos.y * 8.0f) + y, (pos.z * 8.0f) + z);
+                Vec3<float> regionChunk = Vec3<float>((pos.x * 8.0f) + (float)x, (pos.y * 8.0f) + (float)y, (pos.z * 8.0f) + (float)z);
 
                 if (Server::getInstance().chunks.find(regionChunk) == Server::getInstance().chunks.end()) {
                     continue;
@@ -54,7 +54,7 @@ void RegionFormat_V1::save(ByteBuf &buffer, Vec3<float> pos) {
     for (int x = 0; x < 8; x++) {
         for (int y = 0; y < 8; y++) {
             for (int z = 0; z < 8; z++) {
-                Vec3<float> regionChunk = Vec3<float>((pos.x * 8.0f) + x, (pos.y * 8.0f) + y, (pos.z * 8.0f) + z);
+                Vec3<float> regionChunk = Vec3<float>((pos.x * 8.0f) + (float)x, (pos.y * 8.0f) + (float)y, (pos.z * 8.0f) + (float)z);
 
                 if (Server::getInstance().chunks.find(regionChunk) == Server::getInstance().chunks.end()) {
                     // std::cout << "No chunk " << regionChunk.x << " " << regionChunk.y << " " << regionChunk.z << std::endl;

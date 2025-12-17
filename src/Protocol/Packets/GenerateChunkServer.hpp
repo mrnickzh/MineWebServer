@@ -20,9 +20,9 @@ class GenerateChunkServer : public ServerPacket {
         std::shared_ptr<ServerChunkMap> chunkMap = std::make_shared<ServerChunkMap>();
 
 #ifdef BUILD_TYPE_DEDICATED
-            if(!RegionRegistory::getInstance().isLoaded(chunkpos)) {
-                RegionRegistory::getInstance().load(chunkpos);
-            }
+        if(!RegionRegistory::getInstance().isLoaded(chunkpos)) {
+            RegionRegistory::getInstance().load(chunkpos);
+        }
 #endif
 
         if (Server::getInstance().chunks.find(chunkpos) == Server::getInstance().chunks.end()) {
