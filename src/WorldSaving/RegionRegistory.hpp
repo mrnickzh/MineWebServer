@@ -65,9 +65,15 @@ public:
 
         std::vector<uint8_t> data = ZLibUtils::compress_data(bb.toByteArray());
         std::ostringstream ss;
-#ifdef _MSC_VER
-        ss << "regions\\" << (int)currentRegion.x << "_" << (int)currentRegion.y << "_" << (int)currentRegion.z << ".bin";
-#else
+#ifdef BUILD_TYPE_DEDICATED
+    #ifdef _MSC_VER
+            ss << "regions\\" << (int)currentRegion.x << "_" << (int)currentRegion.y << "_" << (int)currentRegion.z << ".bin";
+    #else
+            ss << "regions/" << (int)currentRegion.x << "_" << (int)currentRegion.y << "_" << (int)currentRegion.z << ".bin";
+    #endif
+#endif
+
+#ifndef BUILD_TYPE_DEDICATED
         ss << "/regions/" << (int)currentRegion.x << "_" << (int)currentRegion.y << "_" << (int)currentRegion.z << ".bin";
 #endif
         std::ofstream file(ss.str(), std::ios::binary);
@@ -83,9 +89,15 @@ public:
         loadedRegions.insert(currentRegion);
 
         std::ostringstream ss;
-#ifdef _MSC_VER
-        ss << "regions\\" << (int)currentRegion.x << "_" << (int)currentRegion.y << "_" << (int)currentRegion.z << ".bin";
-#else
+#ifdef BUILD_TYPE_DEDICATED
+    #ifdef _MSC_VER
+            ss << "regions\\" << (int)currentRegion.x << "_" << (int)currentRegion.y << "_" << (int)currentRegion.z << ".bin";
+    #else
+            ss << "regions/" << (int)currentRegion.x << "_" << (int)currentRegion.y << "_" << (int)currentRegion.z << ".bin";
+    #endif
+#endif
+
+#ifndef BUILD_TYPE_DEDICATED
         ss << "/regions/" << (int)currentRegion.x << "_" << (int)currentRegion.y << "_" << (int)currentRegion.z << ".bin";
 #endif
         std::string path = ss.str();
@@ -137,9 +149,15 @@ public:
             Vec3<float> currentRegion = Vec3<float>(stof(regionCoords[0]), stof(regionCoords[1]), stof(regionCoords[2]));
 
             std::ostringstream ss;
-#ifdef _MSC_VER
+#ifdef BUILD_TYPE_DEDICATED
+    #ifdef _MSC_VER
             ss << "regions\\" << (int)currentRegion.x << "_" << (int)currentRegion.y << "_" << (int)currentRegion.z << ".bin";
-#else
+    #else
+            ss << "regions/" << (int)currentRegion.x << "_" << (int)currentRegion.y << "_" << (int)currentRegion.z << ".bin";
+#endif
+#endif
+
+#ifndef BUILD_TYPE_DEDICATED
             ss << "/regions/" << (int)currentRegion.x << "_" << (int)currentRegion.y << "_" << (int)currentRegion.z << ".bin";
 #endif
             std::string path = ss.str();
@@ -174,7 +192,7 @@ public:
         // std::cout << strdata << std::endl;
 
         std::vector<uint8_t> outbuffer = ZLibUtils::compress_data(worldbuffer);
-#ifdef _MSC_VER
+#ifdef BUILD_TYPE_DEDICATED
         std::ofstream file("world.mww", std::ios::binary);
 #else
         std::ofstream file("/world.mww", std::ios::binary);
@@ -187,7 +205,7 @@ public:
 
     void importAll() {
         std::ostringstream ss;
-#ifdef _MSC_VER
+#ifdef BUILD_TYPE_DEDICATED
         ss << "world.mww";
 #else
         ss << "/world.mww";
