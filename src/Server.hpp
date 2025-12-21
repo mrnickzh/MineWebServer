@@ -25,17 +25,21 @@ private:
     uint64_t seedStructures;
     uint64_t seedCaves;
 public:
+    uint64_t seedOres;
+public:
     SeedMap(uint32_t initialSeed) : initialSeed(initialSeed){
         std::mt19937 random(initialSeed);
 
         std::uniform_int_distribution<uint64_t> dist(0, INT64_MAX);
 
-        uint64_t seedTerrain = dist(random);
-        uint64_t seedStructures = dist(random);
-        uint64_t seedCaves = dist(random);
+        seedTerrain = dist(random);
+        seedStructures = dist(random);
+        seedCaves = dist(random);
+        seedOres = dist(random);
 
         printf("seed terrain %llu \n", (unsigned long long) seedTerrain);
         printf("seed caves %llu \n", (unsigned long long) seedCaves);
+        printf("seed ores %llu \n", (unsigned long long) seedOres);
 
         perlinNoiseTerrain = new PerlinNoise(seedTerrain);
         perlinNoiseStructures = new PerlinNoise(seedStructures);

@@ -16,6 +16,47 @@ std::shared_ptr<Block> ServerChunkMap::getBlock(Vec3<float> blockPos) {
     return blocks[blockPos];
 }
 
+void ServerChunkMap::generateOres(Vec3<float> chunkPos,  int oreBlockId, int clusterCount, int clusterSize, int minY, int maxY) {
+    uint64_t seed =
+            Server::getInstance().seedMap->seedOres
+            ^ (uint64_t(chunkPos.x) * 341873128712ULL)
+            ^ (uint64_t(chunkPos.z) * 132897987541ULL)
+            ^ (uint64_t(chunkPos.y) * 42317861ULL)
+            ^ (uint64_t(oreBlockId) * 31ULL);
+    std::mt19937 rng(seed);
+
+    std::uniform_int_distribution<int> distX(0, 7);
+    std::uniform_int_distribution<int> distY(0, 7);
+    std::uniform_int_distribution<int> distZ(0, 7);
+    std::uniform_int_distribution<int> step(-1, 1);
+
+    for (int i = 0; i < clusterCount; i++) {
+        int x = distX(rng);
+        int y = distY(rng);
+        int z = distZ(rng);
+
+        int worldY = int(chunkPos.y) * 8 + y;
+        if (worldY < minY || worldY > maxY)
+            continue;
+
+        for (int j = 0; j < clusterSize; j++) {
+            if (x < 0 || x >= 8 || y < 0 || y >= 8 || z < 0 || z >= 8)
+                break;
+
+            Vec3<float> pos(x, y, z);
+
+            auto it = blocks.find(pos);
+
+            if(it->second->id != 1) continue;
+            it->second = std::make_shared<Block>(oreBlockId, pos);
+
+            x += step(rng);
+            y += step(rng);
+            z += step(rng);
+        }
+    }
+}
+
 void ServerChunkMap::generate(Vec3<float> chunkPos) {
     if (chunkPos.y > 3.0f) {
         for (int x = 0; x < 8; x++) {
@@ -78,33 +119,7 @@ void ServerChunkMap::generate(Vec3<float> chunkPos) {
             }
         }
     }
-
-
-    // switch (genid) {
-    //     case -1:
-    //         for (int x = 0; x < 8; x++) {
-    //             for (int y = 0; y < 8; y++) {
-    //                 for (int z = 0; z < 8; z++) {
-    //                     int id = minid + (rand() % (maxid - minid + 1));
-    //                     Vec3<float> blockPos = Vec3((float)x, (float)y, (float)z);
-    //                     std::shared_ptr<Block> block = std::make_shared<Block>(id, blockPos);
-    //                     blocks[blockPos] = block;
-    //                 }
-    //             }
-    //         }
-    //         break;
-    //     case 0:
-    //         for (int x = 0; x < 8; x++) {
-    //             for (int y = 0; y < 8; y++) {
-    //                 for (int z = 0; z < 8; z++) {
-    //                     Vec3<float> blockPos = Vec3((float)x, (float)y, (float)z);
-    //                     std::shared_ptr<Block> block = std::make_shared<Block>(0, blockPos);
-    //                     blocks[blockPos] = block;
-    //                 }
-    //             }
-    //         }
-    //         break;
-    // }
+    if (chunkPos.y < -4.0f) {
+        generateOres(chunkPos, 4, 1, 3, -250, -35);
+    }
 }
-
-
