@@ -14,6 +14,7 @@ void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>
     ServerPacketHelper::registerPacket(2, []() { return new GenerateChunkServer(); });
     ServerPacketHelper::registerPacket(3, []() { return new EntityActionServer(); });
     ServerPacketHelper::registerPacket(4, []() { return new PlayerAuthInputServer(); });
+    ServerPacketHelper::registerPacket(5, []() { return new LightMapServer(); });
 
     if (!std::filesystem::exists("regions")) {
         std::filesystem::create_directory("regions");

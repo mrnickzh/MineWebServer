@@ -1,6 +1,8 @@
 #pragma once
 
 #include <WorldSaving/RegionRegistory.hpp>
+
+#include "LightMapServer.hpp"
 #include "Server.hpp"
 #include "Protocol/ServerPacket.hpp"
 #include "Utils/ServerChunkMap.hpp"
@@ -53,5 +55,8 @@ class GenerateChunkServer : public ServerPacket {
         GenerateChunkServer packet;
         packet.chunkpos = chunkpos;
         Server::getInstance().sendPacket(session, &packet);
+        LightMapServer lightpacket;
+        lightpacket.chunkpos = chunkpos;
+        Server::getInstance().sendPacket(session, &lightpacket);
     }
 };

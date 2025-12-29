@@ -13,4 +13,5 @@ public:
     std::shared_ptr<Block> getBlock(Vec3<float> blockPos);
     void generate(Vec3<float> chunkPos);
     void generateOres(Vec3<float> chunkPos, int oreBlockId, int clusterCount, int clusterSize, int minY, int maxY);
+    void checkLights(Vec3<float> chunkPos);
 };

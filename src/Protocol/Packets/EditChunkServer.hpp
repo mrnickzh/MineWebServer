@@ -26,6 +26,7 @@ public:
 
         std::shared_ptr<Block> block = std::make_shared<Block>(id, blockpos);
         Server::getInstance().chunks[chunkpos]->addBlock(blockpos, block);
+        Server::getInstance().chunks[chunkpos]->checkLights(chunkpos);
     }
 
     void send(ByteBuf &buffer) override {
@@ -45,6 +46,11 @@ public:
         packet.blockpos = blockpos;
         for (auto& s : Server::getInstance().clients) {
             Server::getInstance().sendPacket(s.first, &packet);
+        }
+        LightMapServer lightpacket;
+        lightpacket.chunkpos = chunkpos;
+        for (auto& s : Server::getInstance().clients) {
+            Server::getInstance().sendPacket(s.first, &lightpacket);
         }
     }
 };
