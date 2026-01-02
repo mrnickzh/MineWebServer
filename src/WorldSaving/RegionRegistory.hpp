@@ -259,7 +259,19 @@ public:
             loadedRegions.insert(Vec3<float>(rx, ry, rz));
 
 #ifdef BUILD_TYPE_DEDICATED
-            save(Vec3<float>(rx, ry, rz));
+            save(Vec3<float>(rx * 8.0f, ry * 8.0f, rz * 8.0f));
+            loadedRegions.erase(Vec3<float>(rx, ry, rz));
+
+            for (int x = 0; x < 8; x++) {
+                for (int y = 0; y < 8; y++) {
+                    for (int z = 0; z < 8; z++) {
+                        Vec3<float> regionChunk = Vec3<float>((rx * 8.0f) + (float)x, (ry * 8.0f) + (float)y, (rz * 8.0f) + (float)z);
+                        if (Server::getInstance().chunks.find(regionChunk) != Server::getInstance().chunks.end()) {
+                            Server::getInstance().chunks.erase(regionChunk);
+                        }
+                    }
+                }
+            }
 #endif
         }
     }
