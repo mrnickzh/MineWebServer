@@ -8,6 +8,7 @@
 
 #include "Protocol/ClientSession.hpp"
 #include "Protocol/ServerPacket.hpp"
+#include "Utils/HeightMap.hpp"
 #include "Utils/Vec.hpp"
 #include "Utils/ServerChunkMap.hpp"
 #include "Utils/ServerEntity.hpp"
@@ -54,6 +55,9 @@ public:
 
     std::map<Vec3<float>, std::shared_ptr<ServerChunkMap>> chunks;
     std::set<ServerEntity> entities;
+
+    float worldMaxY = 256.0f;
+    float worldMinY = -256.0f;
 
     SeedMap* seedMap;
 

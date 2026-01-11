@@ -8,6 +8,7 @@ public:
     int id;
     Vec3<float> chunkpos;
     Vec3<float> blockpos;
+    std::set<Vec3<float>> affectedChunks;
 
     void receive(ByteBuf &buffer) override {
         id = buffer.readInt();
@@ -20,13 +21,15 @@ public:
         float bz = buffer.readFloat();
         blockpos = Vec3<float>(bx, by, bz);
 
+        if (by < Server::getInstance().worldMinY || by > Server::getInstance().worldMaxY) { return; }
+
         // std::cout << id << std::endl;
         // std::cout << chunkpos.x << " " << chunkpos.y << " " << chunkpos.z << std::endl;
         // std::cout << blockpos.x << " " << blockpos.y << " " << blockpos.z << std::endl;
 
         std::shared_ptr<Block> block = std::make_shared<Block>(id, blockpos);
         Server::getInstance().chunks[chunkpos]->addBlock(blockpos, block);
-        Server::getInstance().chunks[chunkpos]->checkLights(chunkpos);
+        affectedChunks = Server::getInstance().chunks[chunkpos]->checkLights(chunkpos);
     }
 
     void send(ByteBuf &buffer) override {
@@ -47,10 +50,12 @@ public:
         for (auto& s : Server::getInstance().clients) {
             Server::getInstance().sendPacket(s.first, &packet);
         }
-        LightMapServer lightpacket;
-        lightpacket.chunkpos = chunkpos;
-        for (auto& s : Server::getInstance().clients) {
-            Server::getInstance().sendPacket(s.first, &lightpacket);
+        for (auto c : affectedChunks) {
+            LightMapServer lightpacket;
+            lightpacket.chunkpos = c;
+            for (auto& s : Server::getInstance().clients) {
+                Server::getInstance().sendPacket(s.first, &lightpacket);
+            }
         }
     }
 };

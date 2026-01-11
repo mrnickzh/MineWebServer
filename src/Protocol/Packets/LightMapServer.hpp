@@ -26,12 +26,10 @@ class LightMapServer : public ServerPacket {
                     buffer.writeFloat(block->position.x);
                     buffer.writeFloat(block->position.y);
                     buffer.writeFloat(block->position.z);
-                    buffer.writeInt(block->lightLevels[0]);
-                    buffer.writeInt(block->lightLevels[1]);
-                    buffer.writeInt(block->lightLevels[2]);
-                    buffer.writeInt(block->lightLevels[3]);
-                    buffer.writeInt(block->lightLevels[4]);
-                    buffer.writeInt(block->lightLevels[5]);
+                    for (int i = 0; i < 6; i++) {
+                        buffer.writeInt(block->lightLevels[i].x);
+                        buffer.writeInt(block->lightLevels[i].y);
+                    }
                 }
             }
         }
