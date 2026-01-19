@@ -27,6 +27,7 @@ class LightMapServer : public ServerPacket {
                     buffer.writeFloat(block->position.y);
                     buffer.writeFloat(block->position.z);
                     for (int i = 0; i < 6; i++) {
+                        // if (block->lightLevels[i].x != 0) { printf("%f %f %f block %d side %d level\n", block->position.x, block->position.y, block->position.z, i, block->lightLevels[i].x); }
                         buffer.writeInt(block->lightLevels[i].x);
                         buffer.writeInt(block->lightLevels[i].y);
                     }

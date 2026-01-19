@@ -136,6 +136,7 @@ void ServerChunkMap::generate(Vec3<float> chunkPos) {
         generateOres(chunkPos, 4, 1, 3, -250, -35);
     }
 
+
     checkAmbient(chunkPos);
 }
 
@@ -165,12 +166,15 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos) {
                     // x
                     // printf("%f %f %f chunk\n", l.first.first.x, l.first.first.y, l.first.first.z);
                     // printf("%f %f %f block\n", l.first.second.x, l.first.second.y, l.first.second.z);
+                    if (l.first.first.x == 0.0f && l.first.first.y == 0.0f && l.first.first.z == -1.0f) {
+                        printf("%f %f %f chunk %f %f %f block %d lvl\n", l.first.first.x, l.first.first.y, l.first.first.z, l.first.second.x, l.first.second.y, l.first.second.z, l.second);
+                    }
                     {
                         float x = l.first.second.x - 1.0f;
                         Vec3<float> lightPos = Vec3<float>(x, l.first.second.y, l.first.second.z);
                         Vec3<float> lightChunk = l.first.first;
                         std::shared_ptr<Block> block = nullptr;
-                        if (x == -1.0f) {
+                        if (x < 0.0f) {
                             x = 7.0f;
                             if (Server::getInstance().chunks.count(Vec3<float>(lightChunk.x - 1.0f, lightChunk.y, lightChunk.z))) {
                                 lightPos = Vec3<float>(x, l.first.second.y, l.first.second.z);
@@ -179,8 +183,11 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos) {
                                 affectedChunks.insert(lightChunk);
                             }
                         }
+                        // if ((l.first.first.x == 0.0f && l.first.first.y == 0.0f && l.first.first.z == -1.0f) && !checkValidPos(Vec3<float>(lightPos.x, lightPos.y, lightPos.z))) {
+                        //     printf("%f %f %f block\n", l.first.second.x, l.first.second.y, l.first.second.z);
+                        // }
                         else if (checkValidPos(Vec3<float>(lightPos.x, lightPos.y, lightPos.z))) {
-                            block = blocks[lightPos];
+                            block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
                         }
                         if (block != nullptr && block->id == 0) {
                             std::pair<Vec3<float>, Vec3<float>> lightBlock = std::make_pair(lightChunk, lightPos);
@@ -195,7 +202,7 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos) {
                         Vec3<float> lightPos = Vec3<float>(x, l.first.second.y, l.first.second.z);
                         Vec3<float> lightChunk = l.first.first;
                         std::shared_ptr<Block> block = nullptr;
-                        if (x == 8.0f) {
+                        if (x > 7.0f) {
                             x = 0.0f;
                             if (Server::getInstance().chunks.count(Vec3<float>(lightChunk.x + 1.0f, lightChunk.y, lightChunk.z))) {
                                 lightPos = Vec3<float>(x, l.first.second.y, l.first.second.z);
@@ -205,7 +212,7 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos) {
                             }
                         }
                         else if (checkValidPos(Vec3<float>(lightPos.x, lightPos.y, lightPos.z))) {
-                            block = blocks[lightPos];
+                            block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
                         }
                         if (block != nullptr && block->id == 0) {
                             std::pair<Vec3<float>, Vec3<float>> lightBlock = std::make_pair(lightChunk, lightPos);
@@ -231,7 +238,7 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos) {
                             }
                         }
                         else if (checkValidPos(Vec3<float>(lightPos.x, lightPos.y, lightPos.z))) {
-                            block = blocks[lightPos];
+                            block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
                         }
                         if (block != nullptr && block->id == 0) {
                             std::pair<Vec3<float>, Vec3<float>> lightBlock = std::make_pair(lightChunk, lightPos);
@@ -256,7 +263,7 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos) {
                             }
                         }
                         else if (checkValidPos(Vec3<float>(lightPos.x, lightPos.y, lightPos.z))) {
-                            block = blocks[lightPos];
+                            block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
                         }
                         if (block != nullptr && block->id == 0) {
                             std::pair<Vec3<float>, Vec3<float>> lightBlock = std::make_pair(lightChunk, lightPos);
@@ -282,8 +289,13 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos) {
                             }
                         }
                         else if (checkValidPos(Vec3<float>(lightPos.x, lightPos.y, lightPos.z))) {
-                            block = blocks[lightPos];
+                            block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
                         }
+                        // if (l.first.first.x == 0.0f && l.first.first.y == 0.0f && l.first.first.z == -1.0f) {
+                        //     printf("%f %f %f chunk %f %f %f block %d lvl ZZZ\n", lightChunk.x, lightChunk.y, lightChunk.z, lightPos.x, lightPos.y, lightPos.z, l.second);
+                        //     printf("%d test1\n", (int)(block != nullptr));
+                        //     printf("%d test2\n", (int)(block->id == 0));
+                        // }
                         if (block != nullptr && block->id == 0) {
                             std::pair<Vec3<float>, Vec3<float>> lightBlock = std::make_pair(lightChunk, lightPos);
                             tempQueue.push_back(std::make_pair(lightBlock, lightIntensity - 1));
@@ -307,7 +319,7 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos) {
                             }
                         }
                         else if (checkValidPos(Vec3<float>(lightPos.x, lightPos.y, lightPos.z))) {
-                            block = blocks[lightPos];
+                            block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
                         }
                         if (block != nullptr && block->id == 0) {
                             std::pair<Vec3<float>, Vec3<float>> lightBlock = std::make_pair(lightChunk, lightPos);
@@ -324,10 +336,20 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos) {
         }
     }
 
-    // std::cout << "kekw" << std::endl;
+    std::cout << "kekw" << std::endl;
     // std::cout << lightResult.size() << std::endl;
     for (auto& r : lightResult) {
+        // EditChunkServer packet;
+        // packet.id = 1;
+        // packet.chunkpos = r.first.first;
+        // packet.blockpos = r.first.second;
+        // for (auto& s : Server::getInstance().clients) {
+        //     Server::getInstance().sendPacket(s.first, &packet);
+        // }
         // x
+        // if (r.first.first.x == 0.0f && r.first.first.z == -1.0f) {
+        //     printf("%f %f %f block %d guh\n", r.first.second.x, r.first.second.y, r.first.second.z, r.second);
+        // }
         // printf("%f %f %f\n", r.first.second.x, r.first.second.y, r.first.second.z);
         // printf("%d light\n", r.second);
         {
@@ -536,9 +558,6 @@ void ServerChunkMap::checkAmbient(Vec3<float> chunkPos) {
     // std::cout << darkResult.size() << std::endl;
     for (auto& r : darkResult) {
         // x
-        if (chunkPos.x == 0.0f && chunkPos.z == -1.0f) {
-            printf("%f %f %f %f\n", r.first.x, r.first.y, r.first.z, chunkPos.y);
-        }
         // printf("%d dark\n", r.second);
         {
             Vec3<float> resultBlock = Vec3<float>(r.first.x - 1.0f, r.first.y, r.first.z);
