@@ -27,9 +27,10 @@ public:
         // std::cout << chunkpos.x << " " << chunkpos.y << " " << chunkpos.z << std::endl;
         // std::cout << blockpos.x << " " << blockpos.y << " " << blockpos.z << std::endl;
 
+        Block prevblock = *(Server::getInstance().chunks[chunkpos]->getBlock(blockpos));
         std::shared_ptr<Block> block = std::make_shared<Block>(id, blockpos);
         Server::getInstance().chunks[chunkpos]->addBlock(blockpos, block);
-        affectedChunks = Server::getInstance().chunks[chunkpos]->checkLights(chunkpos);
+        affectedChunks = Server::getInstance().chunks[chunkpos]->checkLights(chunkpos, prevblock);
     }
 
     void send(ByteBuf &buffer) override {

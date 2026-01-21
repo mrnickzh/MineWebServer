@@ -140,7 +140,7 @@ void ServerChunkMap::generate(Vec3<float> chunkPos) {
     checkAmbient(chunkPos);
 }
 
-std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos) {
+std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos, Block prevblock) {
     std::map<std::pair<Vec3<float>, Vec3<float>>, int> lightResult;
     std::set<Vec3<float>> affectedChunks;
     affectedChunks.insert(chunkPos);
@@ -153,9 +153,14 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos) {
         // std::cout << b.second->id << " id" << std::endl;
         // printf("%f %f %f block\n", b.first.x, b.first.y, b.first.z);
         // if (b.second == nullptr) { continue; }
-        if (b.second->id == 5) {
+        if (b.second->id == 5 || (prevblock.position.x == b.first.x && prevblock.position.y == b.first.y && prevblock.position.z == b.first.z && prevblock.id == 5 && b.second->id != 5)) {
+            bool back = false;
             int lightIntensity = 5;
             Vec3<float> blockPos = b.first;
+            if (prevblock.position.x == blockPos.x && prevblock.position.y == blockPos.y && prevblock.position.z == blockPos.z && prevblock.id == 5 && b.second->id != 5) {
+                back = true;
+                printf("back propagation\n");
+            }
             // printf("%f %f %f start\n", b.first.x, b.first.y, b.first.z);
             std::deque<std::pair<std::pair<Vec3<float>, Vec3<float>>, int>> lightQueue;
             lightQueue.push_back(std::make_pair(std::make_pair(chunkPos, blockPos), lightIntensity));
@@ -166,9 +171,9 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos) {
                     // x
                     // printf("%f %f %f chunk\n", l.first.first.x, l.first.first.y, l.first.first.z);
                     // printf("%f %f %f block\n", l.first.second.x, l.first.second.y, l.first.second.z);
-                    if (l.first.first.x == 0.0f && l.first.first.y == 0.0f && l.first.first.z == -1.0f) {
-                        printf("%f %f %f chunk %f %f %f block %d lvl\n", l.first.first.x, l.first.first.y, l.first.first.z, l.first.second.x, l.first.second.y, l.first.second.z, l.second);
-                    }
+                    // if (l.first.first.x == 0.0f && l.first.first.y == 0.0f && l.first.first.z == -1.0f) {
+                    //     printf("%f %f %f chunk %f %f %f block %d lvl\n", l.first.first.x, l.first.first.y, l.first.first.z, l.first.second.x, l.first.second.y, l.first.second.z, l.second);
+                    // }
                     {
                         float x = l.first.second.x - 1.0f;
                         Vec3<float> lightPos = Vec3<float>(x, l.first.second.y, l.first.second.z);
@@ -192,8 +197,11 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos) {
                         if (block != nullptr && block->id == 0) {
                             std::pair<Vec3<float>, Vec3<float>> lightBlock = std::make_pair(lightChunk, lightPos);
                             tempQueue.push_back(std::make_pair(lightBlock, lightIntensity - 1));
-                            if (!lightResult.count(lightBlock) || lightResult[lightBlock] < lightIntensity - 1) {
+                            if (!back && (!lightResult.count(lightBlock) || lightResult[lightBlock] < lightIntensity - 1)) {
                                 lightResult[lightBlock] = lightIntensity - 1;
+                            }
+                            else if (back && (!lightResult.count(lightBlock) || lightResult[lightBlock] == lightIntensity - 1)) {
+                                lightResult[lightBlock] = 0;
                             }
                         }
                     }
@@ -217,8 +225,11 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos) {
                         if (block != nullptr && block->id == 0) {
                             std::pair<Vec3<float>, Vec3<float>> lightBlock = std::make_pair(lightChunk, lightPos);
                             tempQueue.push_back(std::make_pair(lightBlock, lightIntensity - 1));
-                            if (!lightResult.count(lightBlock) || lightResult[lightBlock] < lightIntensity - 1) {
+                            if (!back && (!lightResult.count(lightBlock) || lightResult[lightBlock] < lightIntensity - 1)) {
                                 lightResult[lightBlock] = lightIntensity - 1;
+                            }
+                            else if (back && (!lightResult.count(lightBlock) || lightResult[lightBlock] == lightIntensity - 1)) {
+                                lightResult[lightBlock] = 0;
                             }
                         }
                     }
@@ -243,8 +254,11 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos) {
                         if (block != nullptr && block->id == 0) {
                             std::pair<Vec3<float>, Vec3<float>> lightBlock = std::make_pair(lightChunk, lightPos);
                             tempQueue.push_back(std::make_pair(lightBlock, lightIntensity - 1));
-                            if (!lightResult.count(lightBlock) || lightResult[lightBlock] < lightIntensity - 1) {
+                            if (!back && (!lightResult.count(lightBlock) || lightResult[lightBlock] < lightIntensity - 1)) {
                                 lightResult[lightBlock] = lightIntensity - 1;
+                            }
+                            else if (back && (!lightResult.count(lightBlock) || lightResult[lightBlock] == lightIntensity - 1)) {
+                                lightResult[lightBlock] = 0;
                             }
                         }
                     }
@@ -268,8 +282,11 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos) {
                         if (block != nullptr && block->id == 0) {
                             std::pair<Vec3<float>, Vec3<float>> lightBlock = std::make_pair(lightChunk, lightPos);
                             tempQueue.push_back(std::make_pair(lightBlock, lightIntensity - 1));
-                            if (!lightResult.count(lightBlock) || lightResult[lightBlock] < lightIntensity - 1) {
+                            if (!back && (!lightResult.count(lightBlock) || lightResult[lightBlock] < lightIntensity - 1)) {
                                 lightResult[lightBlock] = lightIntensity - 1;
+                            }
+                            else if (back && (!lightResult.count(lightBlock) || lightResult[lightBlock] == lightIntensity - 1)) {
+                                lightResult[lightBlock] = 0;
                             }
                         }
                     }
@@ -299,8 +316,11 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos) {
                         if (block != nullptr && block->id == 0) {
                             std::pair<Vec3<float>, Vec3<float>> lightBlock = std::make_pair(lightChunk, lightPos);
                             tempQueue.push_back(std::make_pair(lightBlock, lightIntensity - 1));
-                            if (!lightResult.count(lightBlock) || lightResult[lightBlock] < lightIntensity - 1) {
+                            if (!back && (!lightResult.count(lightBlock) || lightResult[lightBlock] < lightIntensity - 1)) {
                                 lightResult[lightBlock] = lightIntensity - 1;
+                            }
+                            else if (back && (!lightResult.count(lightBlock) || lightResult[lightBlock] == lightIntensity - 1)) {
+                                lightResult[lightBlock] = 0;
                             }
                         }
                     }
@@ -324,8 +344,11 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos) {
                         if (block != nullptr && block->id == 0) {
                             std::pair<Vec3<float>, Vec3<float>> lightBlock = std::make_pair(lightChunk, lightPos);
                             tempQueue.push_back(std::make_pair(lightBlock, lightIntensity - 1));
-                            if (!lightResult.count(lightBlock) || lightResult[lightBlock] < lightIntensity - 1) {
+                            if (!back && (!lightResult.count(lightBlock) || lightResult[lightBlock] < lightIntensity - 1)) {
                                 lightResult[lightBlock] = lightIntensity - 1;
+                            }
+                            else if (back && (!lightResult.count(lightBlock) || lightResult[lightBlock] == lightIntensity - 1)) {
+                                lightResult[lightBlock] = 0;
                             }
                         }
                     }
@@ -360,7 +383,7 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos) {
                 resultChunk.x -= 1.0f;
             }
             std::shared_ptr<Block> block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
-            if (block->id != 0 && block->lightLevels[3].x < r.second) {
+            if (block->id != 0 && (block->lightLevels[3].x < r.second || r.second == 0)) {
                 // std::cout << "front" << std::endl;
                 block->lightLevels[3].x = r.second;
             }
@@ -373,7 +396,7 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos) {
                 resultChunk.x += 1.0f;
             }
             std::shared_ptr<Block> block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
-            if (block->id != 0 && block->lightLevels[2].x < r.second) {
+            if (block->id != 0 && (block->lightLevels[2].x < r.second || r.second == 0)) {
                 // std::cout << "back" << std::endl;
                 block->lightLevels[2].x = r.second;
             }
@@ -387,7 +410,7 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos) {
                 resultChunk.y -= 1.0f;
             }
             std::shared_ptr<Block> block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
-            if (block->id != 0 && block->lightLevels[5].x < r.second) {
+            if (block->id != 0 && (block->lightLevels[5].x < r.second || r.second == 0)) {
                 // std::cout << "top" << std::endl;
                 block->lightLevels[5].x = r.second;
             }
@@ -400,7 +423,7 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos) {
                 resultChunk.y += 1.0f;
             }
             std::shared_ptr<Block> block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
-            if (block->id != 0 && block->lightLevels[4].x < r.second) {
+            if (block->id != 0 && (block->lightLevels[4].x < r.second || r.second == 0)) {
                 // std::cout << "bottom" << std::endl;
                 block->lightLevels[4].x = r.second;
             }
@@ -414,7 +437,7 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos) {
                 resultChunk.z -= 1.0f;
             }
             std::shared_ptr<Block> block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
-            if (block->id != 0 && block->lightLevels[1].x < r.second) {
+            if (block->id != 0 && (block->lightLevels[1].x < r.second || r.second == 0)) {
                 // std::cout << "right" << std::endl;
                 block->lightLevels[1].x = r.second;
             }
@@ -427,7 +450,7 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos) {
                 resultChunk.z += 1.0f;
             }
             std::shared_ptr<Block> block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
-            if (block->id != 0 && block->lightLevels[0].x < r.second) {
+            if (block->id != 0 && (block->lightLevels[0].x < r.second || r.second == 0)) {
                 // std::cout << "left" << std::endl;
                 block->lightLevels[0].x = r.second;
             }
