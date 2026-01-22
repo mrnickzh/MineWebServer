@@ -8,7 +8,8 @@ public:
     int id;
     Vec3<float> chunkpos;
     Vec3<float> blockpos;
-    std::set<Vec3<float>> affectedChunks;
+    std::set<Vec3<float>> L_affectedChunks;
+    std::set<Vec3<float>> A_affectedChunks;
 
     void receive(ByteBuf &buffer) override {
         id = buffer.readInt();
@@ -30,7 +31,8 @@ public:
         Block prevblock = *(Server::getInstance().chunks[chunkpos]->getBlock(blockpos));
         std::shared_ptr<Block> block = std::make_shared<Block>(id, blockpos);
         Server::getInstance().chunks[chunkpos]->addBlock(blockpos, block);
-        affectedChunks = Server::getInstance().chunks[chunkpos]->checkLights(chunkpos, prevblock);
+        A_affectedChunks = Server::getInstance().chunks[chunkpos]->checkHeight(chunkpos, blockpos);
+        L_affectedChunks = Server::getInstance().chunks[chunkpos]->checkLights(chunkpos, prevblock);
     }
 
     void send(ByteBuf &buffer) override {
@@ -50,6 +52,18 @@ public:
         packet.blockpos = blockpos;
         for (auto& s : Server::getInstance().clients) {
             Server::getInstance().sendPacket(s.first, &packet);
+        }
+
+        std::set<Vec3<float>> affectedChunks;
+
+        for (auto c : L_affectedChunks) {
+            affectedChunks.insert(c);
+        }
+        for (auto c : A_affectedChunks) {
+            if (Server::getInstance().chunks.count(c)) {
+                Server::getInstance().chunks[c]->checkAmbient(c);
+                affectedChunks.insert(c);
+            }
         }
         for (auto c : affectedChunks) {
             LightMapServer lightpacket;

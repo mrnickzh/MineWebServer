@@ -100,15 +100,17 @@ void ServerChunkMap::generate(Vec3<float> chunkPos) {
                     int id = 2;
                     if (chunkPos.y * 8 + (float)y > maxy) {
                         id = 0;
+                    }
+                    if (chunkPos.y * 8 + (float)y == std::floor(maxy)) {
+                        id = 3;
                         Vec3<float> ambientPos = Vec3<float>((float)x, (float)y + 1, (float)z);
                         float height = chunkPos.y;
                         if (ambientPos.y > 7.0f) {
                             height += 1;
+                            ambientPos.y = 0.0f;
                         }
-                        HeightMap::getInstance().addMap(Vec2<float>(chunkPos.x, chunkPos.z),  height, ambientPos);
-                    }
-                    if (chunkPos.y * 8 + (float)y == std::floor(maxy)) {
-                        id = 3;
+                        if (chunkPos.x == 0.0f && chunkPos.z == 0.0f && x == 0 && z == 0) { std::cout << ambientPos.y << ", " << y << std::endl; }
+                        HeightMap::getInstance().addMap(Vec2<float>(chunkPos.x, chunkPos.z), height, ambientPos);
                     }
                     std::shared_ptr<Block> block = std::make_shared<Block>(id, blockPos);
                     blocks[blockPos] = block;
@@ -129,13 +131,13 @@ void ServerChunkMap::generate(Vec3<float> chunkPos) {
                 float k = (Server::getInstance().seedMap->perlinNoiseCaves->generate3D((float)wx, (float)wy, (float)wz, 0.02f) + 1.0f) / 2.0f;
 
                 if (k > 0.6f) blocks[blockPos] = std::make_shared<Block>(0, blockPos);
+                // checkHeight(chunkPos, blockPos);
             }
         }
     }
     if (chunkPos.y < -4.0f) {
         generateOres(chunkPos, 4, 1, 3, -250, -35);
     }
-
 
     checkAmbient(chunkPos);
 }
@@ -469,22 +471,39 @@ void ServerChunkMap::checkAmbient(Vec3<float> chunkPos) {
         ambients.insert(Vec3<float>(a.second.x, ((chunkPos.y * 8.0f) - (a.first * 8.0f)) + a.second.y, a.second.z));
     }
 
+    for (auto& b : blocks) {
+        if (b.second->id != 0) {
+            for (int i = 0; i < 6; i++) {
+                b.second->lightLevels[i].y = -5;
+            }
+        }
+    }
+
     for (auto& a : ambients) {
         // ch++;
         // std::cout << ch << " ch" << std::endl;
         // std::cout << b.second->id << " id" << std::endl;
         // if (b.second == nullptr) { continue; }
         int darknessLevel = 0;
-        // printf("%f %f %f start\n", b.first.x, b.first.y, b.first.z);
+        // if (chunkPos.x == 0.0f && chunkPos.y == 0.0f && chunkPos.z == 0.0f) {
+        //     printf("%f %f %f start\n", a.x, a.y, a.z);
+        // }
         std::deque<std::pair<Vec3<float>, int>> darknessQueue;
         darknessQueue.push_back(std::make_pair(a, darknessLevel));
+        darkResult[a] = darknessLevel;
         while (!darknessQueue.empty() && darknessLevel > -5) {
             // std::cout << lightQueue.size() << std::endl;
             std::deque<std::pair<Vec3<float>, int>> tempQueue;
+            if (chunkPos.x == 0.0f && chunkPos.y == 0.0f && chunkPos.z == 0.0f && a.x == 0.0f && a.z == 0.0f) {
+                printf("start\n");
+            }
             for (auto& l : darknessQueue) {
                 // x
                 // printf("%f %f %f chunk\n", l.first.first.x, l.first.first.y, l.first.first.z);
                 // printf("%f %f %f block\n", l.first.second.x, l.first.second.y, l.first.second.z);
+                if (chunkPos.x == 0.0f && chunkPos.y == 0.0f && chunkPos.z == 0.0f && l.first.x == 0.0f && l.first.z == 0.0f) {
+                    printf("%f %f %f block %d lvl\n", l.first.x, l.first.y, l.first.z, l.second);
+                }
                 {
                     float x = l.first.x - 1.0f;
                     Vec3<float> darkPos = Vec3<float>(x, l.first.y, l.first.z);
@@ -506,6 +525,10 @@ void ServerChunkMap::checkAmbient(Vec3<float> chunkPos) {
                     if (checkValidPos(Vec3<float>(darkPos.x, darkPos.y, darkPos.z))) {
                         block = blocks[darkPos];
                     }
+                    // if (chunkPos.x == 0.0f && chunkPos.y == 0.0f && chunkPos.z == 0.0f && darkPos.x == 1.0f && darkPos.z == 0.0f) {
+                    //     printf("%f %f %f block %d lvl\n", darkPos.x, darkPos.y, darkPos.z, darknessLevel);
+                    //     printf("%d %d %d checks\n", (int)(block != nullptr), (int)(block->id == 0), (int)(ambients.find(darkPos) == ambients.end()));
+                    // }
                     if (block != nullptr && block->id == 0 && ambients.find(darkPos) == ambients.end()) {
                         tempQueue.push_back(std::make_pair(darkPos, darknessLevel));
                         if (!darkResult.count(darkPos) || darkResult[darkPos] < darknessLevel) {
@@ -611,6 +634,10 @@ void ServerChunkMap::checkAmbient(Vec3<float> chunkPos) {
             if (checkValidPos(Vec3<float>(resultBlock.x, resultBlock.y, resultBlock.z))) {
                 block = blocks[resultBlock];
             }
+            // if (chunkPos.x == 0.0f && chunkPos.y == 0.0f && chunkPos.z == 0.0f && resultBlock.x == 0.0f && resultBlock.z == 0.0f) {
+            //     printf("%f %f %f block %d lvl\n", resultBlock.x, resultBlock.y, resultBlock.z, r.second);
+            //     printf("%d %d %d checks\n", (int)(block != nullptr), (int)(block->id != 0), (int)(block->lightLevels[5].y < r.second));
+            // }
             if (block != nullptr && block->id != 0 && block->lightLevels[5].y < r.second) {
                 // std::cout << "top" << std::endl;
                 block->lightLevels[5].y = r.second;
@@ -651,4 +678,58 @@ void ServerChunkMap::checkAmbient(Vec3<float> chunkPos) {
             }
         }
     }
+}
+
+std::set<Vec3<float>> ServerChunkMap::checkHeight(Vec3<float> chunkPos, Vec3<float> blockPos) {
+    if (!HeightMap::getInstance().heightMaps.count(Vec2<float>(chunkPos.x, chunkPos.z))) { return std::set<Vec3<float>>{}; }
+
+    auto res = std::find_if(HeightMap::getInstance().heightMaps[Vec2<float>(chunkPos.x, chunkPos.z)].begin(), HeightMap::getInstance().heightMaps[Vec2<float>(chunkPos.x, chunkPos.z)].end(), [&](auto& heightblock) {
+        if (heightblock.second.x == blockPos.x && heightblock.second.z == blockPos.z) { return true; } return false;
+    });
+    if (res == HeightMap::getInstance().heightMaps[Vec2<float>(chunkPos.x, chunkPos.z)].end()) { return std::set<Vec3<float>>{}; }
+
+    // printf("%f %f ambient", res->second.y + (res->first * 8.0f), blockPos.y + (chunkPos.y * 8.0f));
+
+    if (res->second.y + (res->first * 8.0f) <= blockPos.y + (chunkPos.y * 8.0f) && blocks[blockPos]->id != 0) {
+        float prevheight = res->first;
+        if (blockPos.y + 1.0f > 7.0f) {
+            res->first = chunkPos.y + 1.0f;
+            res->second = Vec3<float>(blockPos.x, 0.0f, blockPos.z);
+        }
+        else {
+            res->first = chunkPos.y;
+            res->second = Vec3<float>(blockPos.x, blockPos.y + 1.0f, blockPos.z);
+        }
+        return std::set<Vec3<float>>{Vec3<float>(chunkPos.x, prevheight, chunkPos.z), Vec3<float>(chunkPos.x, res->first, chunkPos.z)};
+    }
+    if (res->second.y + (res->first * 8.0f) > blockPos.y + (chunkPos.y * 8.0f) && blocks[blockPos]->id == 0) {
+        float prevheight = res->first;
+        float solidHeight = res->second.y;
+        float chunkHeight = res->first;
+        while (true) {
+            if (solidHeight - 1.0f < 0.0f) {
+                chunkHeight -= 1.0f;
+                solidHeight = 7.0f;
+            }
+            else {
+                solidHeight -= 1.0f;
+            }
+            Vec3<float> solidPos = Vec3<float>(res->second.x, solidHeight, res->second.z);
+            Vec3<float> solidChunk = Vec3<float>(chunkPos.x, chunkHeight, chunkPos.z);
+
+            if (!Server::getInstance().chunks.count(solidChunk) || Server::getInstance().chunks[solidChunk]->blocks[solidPos]->id != 0) {
+                if (solidPos.y + 1.0f > 7.0f) {
+                    solidChunk.y += 1.0f;
+                    solidPos.y = 0.0f;
+                }
+                else {
+                    solidPos.y += 1.0f;
+                }
+                res->first = solidChunk.y;
+                res->second = Vec3<float>(solidPos.x, solidPos.y, solidPos.z);
+                return std::set<Vec3<float>>{Vec3<float>(chunkPos.x, prevheight, chunkPos.z), Vec3<float>(chunkPos.x, res->first, chunkPos.z)};
+            }
+        }
+    }
+    return std::set<Vec3<float>>{};
 }
