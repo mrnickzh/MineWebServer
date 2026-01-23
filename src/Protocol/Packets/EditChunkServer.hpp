@@ -22,8 +22,6 @@ public:
         float bz = buffer.readFloat();
         blockpos = Vec3<float>(bx, by, bz);
 
-        if (by < Server::getInstance().worldMinY || by > Server::getInstance().worldMaxY) { return; }
-
         // std::cout << id << std::endl;
         // std::cout << chunkpos.x << " " << chunkpos.y << " " << chunkpos.z << std::endl;
         // std::cout << blockpos.x << " " << blockpos.y << " " << blockpos.z << std::endl;

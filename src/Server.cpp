@@ -1,6 +1,7 @@
 #include "Server.hpp"
 
 #include <iostream>
+#include <mutex>
 
 #include "Protocol/ClientSession.hpp"
 #include "Protocol/ServerPacketHelper.hpp"
@@ -19,6 +20,22 @@ void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>
     if (!std::filesystem::exists("regions")) {
         std::filesystem::create_directory("regions");
     }
+
+#ifndef BUILD_TYPE_DEDICATED
+    std::thread packetprocessor([&]() {
+        while (true) {
+            // std::cout << serverPacketQueue.size() << " queue" << std::endl;
+            while (!serverPacketQueue.empty()) {
+                std::lock_guard<std::mutex> guard(serverPacketQueueMutex);
+                std::pair<ClientSession*, std::vector<uint8_t>> packet = serverPacketQueue.front();
+                ServerPacketHelper::decodePacket(packet.first, packet.second);
+                serverPacketQueue.pop_front();
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+    });
+    packetprocessor.detach();
+#endif
 
 #ifdef BUILD_TYPE_DEDICATED
     std::thread watcher([&]() {
@@ -71,7 +88,12 @@ void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>
 }
 
 void Server::processPacket(ClientSession* session, std::vector<uint8_t> data) {
+#ifndef BUILD_TYPE_DEDICATED
+    std::lock_guard<std::mutex> guard(serverPacketQueueMutex);
+    serverPacketQueue.push_back(std::pair<ClientSession*, std::vector<uint8_t>>(session, data));
+#else
     ServerPacketHelper::decodePacket(session, data);
+#endif
 }
 
 void Server::sendPacket(ClientSession* session, ServerPacket* packet) {

@@ -1,4 +1,5 @@
 #pragma once
+#include <deque>
 #include <functional>
 #include <map>
 #include <vector>
@@ -56,8 +57,10 @@ public:
     std::map<Vec3<float>, std::shared_ptr<ServerChunkMap>> chunks;
     std::set<ServerEntity> entities;
 
-    float worldMaxY = 256.0f;
-    float worldMinY = -256.0f;
+#ifndef BUILD_TYPE_DEDICATED
+    std::mutex serverPacketQueueMutex;
+    std::deque<std::pair<ClientSession*, std::vector<uint8_t>>> serverPacketQueue;
+#endif
 
     SeedMap* seedMap;
 
