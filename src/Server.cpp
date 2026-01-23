@@ -91,8 +91,15 @@ void Server::processPacket(ClientSession* session, std::vector<uint8_t> data) {
 #ifndef BUILD_TYPE_DEDICATED
     // std::lock_guard<std::mutex> guard(serverPacketQueueMutex);
     if (serverPacketQueueMutex.try_lock()) {
+        for (auto p : serverFallbackPacketQueue) {
+            serverPacketQueue.push_back(p);
+            serverFallbackPacketQueue.pop_front();
+        }
         serverPacketQueue.push_back(std::pair<ClientSession*, std::vector<uint8_t>>(session, data));
         serverPacketQueueMutex.unlock();
+    }
+    else {
+        serverFallbackPacketQueue.push_back(std::pair<ClientSession*, std::vector<uint8_t>>(session, data));
     }
 #else
     ServerPacketHelper::decodePacket(session, data);
