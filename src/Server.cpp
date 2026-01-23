@@ -89,8 +89,11 @@ void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>
 
 void Server::processPacket(ClientSession* session, std::vector<uint8_t> data) {
 #ifndef BUILD_TYPE_DEDICATED
-    std::lock_guard<std::mutex> guard(serverPacketQueueMutex);
-    serverPacketQueue.push_back(std::pair<ClientSession*, std::vector<uint8_t>>(session, data));
+    // std::lock_guard<std::mutex> guard(serverPacketQueueMutex);
+    if (serverPacketQueueMutex.try_lock()) {
+        serverPacketQueue.push_back(std::pair<ClientSession*, std::vector<uint8_t>>(session, data));
+        serverPacketQueueMutex.unlock();
+    }
 #else
     ServerPacketHelper::decodePacket(session, data);
 #endif
