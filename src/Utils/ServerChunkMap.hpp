@@ -18,4 +18,5 @@ public:
     std::set<Vec3<float>> checkAmbient(Vec3<float> chunkPos);
     std::set<Vec3<float>> checkHeight(Vec3<float> chunkPos, Vec3<float> blockPos);
     void resetAmbient();
+    void resetLights();
 };
