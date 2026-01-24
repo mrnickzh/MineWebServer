@@ -215,6 +215,7 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos, Block pr
                             tempQueue[lightBlock] = lightIntensity - 1;
                         }
                         if (!lightResult.count(lightBlock)) {
+                            affectedChunks.insert(lightChunk);
                             lightResult[lightBlock] = 0;
                         }
                     }
@@ -241,6 +242,7 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos, Block pr
                             tempQueue[lightBlock] = lightIntensity - 1;
                         }
                         if (!lightResult.count(lightBlock)) {
+                            affectedChunks.insert(lightChunk);
                             lightResult[lightBlock] = 0;
                         }
                     }
@@ -268,6 +270,7 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos, Block pr
                             tempQueue[lightBlock] = lightIntensity - 1;
                         }
                         if (!lightResult.count(lightBlock)) {
+                            affectedChunks.insert(lightChunk);
                             lightResult[lightBlock] = 0;
                         }
                     }
@@ -294,6 +297,7 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos, Block pr
                             tempQueue[lightBlock] = lightIntensity - 1;
                         }
                         if (!lightResult.count(lightBlock)) {
+                            affectedChunks.insert(lightChunk);
                             lightResult[lightBlock] = 0;
                         }
                     }
@@ -327,6 +331,7 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos, Block pr
                         }
                         if (!lightResult.count(lightBlock)) {
                             lightResult[lightBlock] = 0;
+                            affectedChunks.insert(lightChunk);
                         }
                     }
                 }
@@ -353,6 +358,7 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos, Block pr
                         }
                         if (!lightResult.count(lightBlock)) {
                             lightResult[lightBlock] = 0;
+                            affectedChunks.insert(lightChunk);
                         }
                     }
                 }
@@ -703,8 +709,10 @@ std::set<Vec3<float>> ServerChunkMap::checkAmbient(Vec3<float> chunkPos) {
 
     std::map<std::pair<Vec3<float>, Vec3<float>>, int> darknessQueue;
     for (auto& a : HeightMap::getInstance().heightMaps[Vec2<float>(chunkPos.x, chunkPos.z)]) {
-        darknessQueue[std::pair(Vec3<float>(chunkPos.x, a.first, chunkPos.z), Vec3<float>(a.second.x, a.second.y, a.second.z))] = 0;
-        darkResult[std::pair(Vec3<float>(chunkPos.x, a.first, chunkPos.z), Vec3<float>(a.second.x, a.second.y, a.second.z))] = 0;
+        if (a.first == chunkPos.y) {
+            darknessQueue[std::pair(Vec3<float>(chunkPos.x, a.first, chunkPos.z), Vec3<float>(a.second.x, a.second.y, a.second.z))] = 0;
+            darkResult[std::pair(Vec3<float>(chunkPos.x, a.first, chunkPos.z), Vec3<float>(a.second.x, a.second.y, a.second.z))] = 0;
+        }
     }
 
     // ch++;
@@ -752,9 +760,10 @@ std::set<Vec3<float>> ServerChunkMap::checkAmbient(Vec3<float> chunkPos) {
                         block = Server::getInstance().chunks[darkChunk]->getBlock(darkPos);
                     }
                 }
-                if (block != nullptr && block->id == 0) {
+                if (block != nullptr && block->id == 0 && HeightMap::getInstance().heightMaps.count(Vec2<float>(darkChunk.x, darkChunk.z))) {
+                    auto it = std::find(HeightMap::getInstance().heightMaps.at(Vec2<float>(darkChunk.x, darkChunk.z)).begin(), HeightMap::getInstance().heightMaps.at(Vec2<float>(darkChunk.x, darkChunk.z)).end(), std::pair(darkChunk.y, darkPos));
                     std::pair<Vec3<float>, Vec3<float>> darkBlock = std::make_pair(darkChunk, darkPos);
-                    if (!darkResult.count(darkBlock) || darkResult[darkBlock] < darknessLevel - 1) {
+                    if ((!darkResult.count(darkBlock) || darkResult[darkBlock] < darknessLevel - 1) && it == HeightMap::getInstance().heightMaps.at(Vec2<float>(darkChunk.x, darkChunk.z)).end()) {
                         tempQueue[darkBlock] = darknessLevel - 1;
                         darkResult[darkBlock] = darknessLevel - 1;
                     }
@@ -784,9 +793,10 @@ std::set<Vec3<float>> ServerChunkMap::checkAmbient(Vec3<float> chunkPos) {
                         block = Server::getInstance().chunks[darkChunk]->getBlock(darkPos);
                     }
                 }
-                if (block != nullptr && block->id == 0) {
+                if (block != nullptr && block->id == 0 && HeightMap::getInstance().heightMaps.count(Vec2<float>(darkChunk.x, darkChunk.z))) {
+                    auto it = std::find(HeightMap::getInstance().heightMaps.at(Vec2<float>(darkChunk.x, darkChunk.z)).begin(), HeightMap::getInstance().heightMaps.at(Vec2<float>(darkChunk.x, darkChunk.z)).end(), std::pair(darkChunk.y, darkPos));
                     std::pair<Vec3<float>, Vec3<float>> darkBlock = std::make_pair(darkChunk, darkPos);
-                    if (!darkResult.count(darkBlock) || darkResult[darkBlock] < darknessLevel - 1) {
+                    if ((!darkResult.count(darkBlock) || darkResult[darkBlock] < darknessLevel - 1) && it == HeightMap::getInstance().heightMaps.at(Vec2<float>(darkChunk.x, darkChunk.z)).end()) {
                         tempQueue[darkBlock] = darknessLevel - 1;
                         darkResult[darkBlock] = darknessLevel - 1;
                     }
@@ -817,9 +827,10 @@ std::set<Vec3<float>> ServerChunkMap::checkAmbient(Vec3<float> chunkPos) {
                         block = Server::getInstance().chunks[darkChunk]->getBlock(darkPos);
                     }
                 }
-                if (block != nullptr && block->id == 0) {
+                if (block != nullptr && block->id == 0 && HeightMap::getInstance().heightMaps.count(Vec2<float>(darkChunk.x, darkChunk.z))) {
+                    auto it = std::find(HeightMap::getInstance().heightMaps.at(Vec2<float>(darkChunk.x, darkChunk.z)).begin(), HeightMap::getInstance().heightMaps.at(Vec2<float>(darkChunk.x, darkChunk.z)).end(), std::pair(darkChunk.y, darkPos));
                     std::pair<Vec3<float>, Vec3<float>> darkBlock = std::make_pair(darkChunk, darkPos);
-                    if (!darkResult.count(darkBlock) || darkResult[darkBlock] < darknessLevel - 1) {
+                    if ((!darkResult.count(darkBlock) || darkResult[darkBlock] < darknessLevel - 1) && it == HeightMap::getInstance().heightMaps.at(Vec2<float>(darkChunk.x, darkChunk.z)).end()) {
                         tempQueue[darkBlock] = darknessLevel - 1;
                         darkResult[darkBlock] = darknessLevel - 1;
                     }
@@ -849,9 +860,10 @@ std::set<Vec3<float>> ServerChunkMap::checkAmbient(Vec3<float> chunkPos) {
                         block = Server::getInstance().chunks[darkChunk]->getBlock(darkPos);
                     }
                 }
-                if (block != nullptr && block->id == 0) {
+                if (block != nullptr && block->id == 0 && HeightMap::getInstance().heightMaps.count(Vec2<float>(darkChunk.x, darkChunk.z))) {
+                    auto it = std::find(HeightMap::getInstance().heightMaps.at(Vec2<float>(darkChunk.x, darkChunk.z)).begin(), HeightMap::getInstance().heightMaps.at(Vec2<float>(darkChunk.x, darkChunk.z)).end(), std::pair(darkChunk.y, darkPos));
                     std::pair<Vec3<float>, Vec3<float>> darkBlock = std::make_pair(darkChunk, darkPos);
-                    if (!darkResult.count(darkBlock) || darkResult[darkBlock] < darknessLevel - 1) {
+                    if ((!darkResult.count(darkBlock) || darkResult[darkBlock] < darknessLevel - 1) && it == HeightMap::getInstance().heightMaps.at(Vec2<float>(darkChunk.x, darkChunk.z)).end()) {
                         tempQueue[darkBlock] = darknessLevel - 1;
                         darkResult[darkBlock] = darknessLevel - 1;
                     }
@@ -882,9 +894,10 @@ std::set<Vec3<float>> ServerChunkMap::checkAmbient(Vec3<float> chunkPos) {
                         block = Server::getInstance().chunks[darkChunk]->getBlock(darkPos);
                     }
                 }
-                if (block != nullptr && block->id == 0) {
+                if (block != nullptr && block->id == 0 && HeightMap::getInstance().heightMaps.count(Vec2<float>(darkChunk.x, darkChunk.z))) {
+                    auto it = std::find(HeightMap::getInstance().heightMaps.at(Vec2<float>(darkChunk.x, darkChunk.z)).begin(), HeightMap::getInstance().heightMaps.at(Vec2<float>(darkChunk.x, darkChunk.z)).end(), std::pair(darkChunk.y, darkPos));
                     std::pair<Vec3<float>, Vec3<float>> darkBlock = std::make_pair(darkChunk, darkPos);
-                    if (!darkResult.count(darkBlock) || darkResult[darkBlock] < darknessLevel - 1) {
+                    if ((!darkResult.count(darkBlock) || darkResult[darkBlock] < darknessLevel - 1) && it == HeightMap::getInstance().heightMaps.at(Vec2<float>(darkChunk.x, darkChunk.z)).end()) {
                         tempQueue[darkBlock] = darknessLevel - 1;
                         darkResult[darkBlock] = darknessLevel - 1;
                     }
@@ -914,9 +927,10 @@ std::set<Vec3<float>> ServerChunkMap::checkAmbient(Vec3<float> chunkPos) {
                         block = Server::getInstance().chunks[darkChunk]->getBlock(darkPos);
                     }
                 }
-                if (block != nullptr && block->id == 0) {
+                if (block != nullptr && block->id == 0 && HeightMap::getInstance().heightMaps.count(Vec2<float>(darkChunk.x, darkChunk.z))) {
+                    auto it = std::find(HeightMap::getInstance().heightMaps.at(Vec2<float>(darkChunk.x, darkChunk.z)).begin(), HeightMap::getInstance().heightMaps.at(Vec2<float>(darkChunk.x, darkChunk.z)).end(), std::pair(darkChunk.y, darkPos));
                     std::pair<Vec3<float>, Vec3<float>> darkBlock = std::make_pair(darkChunk, darkPos);
-                    if (!darkResult.count(darkBlock) || darkResult[darkBlock] < darknessLevel - 1) {
+                    if ((!darkResult.count(darkBlock) || darkResult[darkBlock] < darknessLevel - 1) && it == HeightMap::getInstance().heightMaps.at(Vec2<float>(darkChunk.x, darkChunk.z)).end()) {
                         tempQueue[darkBlock] = darknessLevel - 1;
                         darkResult[darkBlock] = darknessLevel - 1;
                     }

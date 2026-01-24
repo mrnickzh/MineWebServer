@@ -57,6 +57,7 @@ public:
 
         for (auto c : L_affectedChunks) {
             affectedChunks.insert(c);
+            Server::getInstance().chunks[c]->checkLights(c, Block(0, Vec3<float>(0.0f, 0.0f, 0.0f)));
         }
         for (auto c : A_affectedChunks) {
             ambientChunks.insert(c);
@@ -72,7 +73,7 @@ public:
             Server::getInstance().chunks[c]->checkAmbient(c);
             affectedChunks.insert(c);
         }
-        std::cout << affectedChunks.size() << " size" << std::endl;
+        // std::cout << affectedChunks.size() << " size" << std::endl;
         for (auto c : affectedChunks) {
             LightMapServer lightpacket;
             lightpacket.chunkpos = c;
