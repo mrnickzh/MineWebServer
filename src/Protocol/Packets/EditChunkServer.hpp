@@ -59,23 +59,20 @@ public:
             affectedChunks.insert(c);
         }
         for (auto c : A_affectedChunks) {
-            if (Server::getInstance().chunks.count(c)) {
-                Server::getInstance().chunks[c]->resetAmbient();
-                ambientChunks.insert(c);
-            }
-        }
-        for (auto c : A_affectedChunks) {
+            ambientChunks.insert(c);
             std::set<Vec3<float>> chunks = Server::getInstance().chunks[c]->checkAmbient(c);
             for (auto& a : chunks) {
-                Server::getInstance().chunks[a]->resetAmbient();
                 ambientChunks.insert(a);
             }
         }
-        std::cout << ambientChunks.size() << " size" << std::endl;
+        for (auto c : ambientChunks) {
+            Server::getInstance().chunks[c]->resetAmbient();
+        }
         for (auto c : ambientChunks) {
             Server::getInstance().chunks[c]->checkAmbient(c);
             affectedChunks.insert(c);
         }
+        std::cout << affectedChunks.size() << " size" << std::endl;
         for (auto c : affectedChunks) {
             LightMapServer lightpacket;
             lightpacket.chunkpos = c;
