@@ -9,6 +9,10 @@ public:
     Vec2() = default;
     explicit Vec2(T x, T y) : x(x), y(y) {}
 
+    bool operator==(const Vec2<T>& v) const {
+        return x == v.x && y == v.y;
+    }
+
     bool operator<(const Vec2<T>& v) const {
         return std::tie(x, y) < std::tie(v.x, v.y);
     }
@@ -57,6 +61,10 @@ public:
 
     Vec3() = default;
     explicit Vec3(T x, T y, T z) : x(x), y(y), z(z) {}
+
+    bool operator==(const Vec3<T>& v) const {
+        return x == v.x && y == v.y && z == v.z;
+    }
 
     bool operator<(const Vec3<T>& v) const {
         return std::tie(x, y, z) < std::tie(v.x, v.y, v.z);
