@@ -2,6 +2,8 @@
 #include <iostream>
 #include "RegionFormat_V1.hpp"
 
+#include <mutex>
+
 void RegionFormat_V1::load(ByteBuf &buffer, Vec3<float> pos) {
     int size = buffer.readInt();
 
@@ -28,7 +30,10 @@ void RegionFormat_V1::load(ByteBuf &buffer, Vec3<float> pos) {
         }
 
         // std::cout << regionChunk.x << " " << regionChunk.y << " " << regionChunk.z << " regionchunk" << std::endl;
-        Server::getInstance().chunks[regionChunk] = chunkMap;
+        {
+            std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
+            Server::getInstance().chunks[regionChunk] = chunkMap;
+        }
     }
 }
 

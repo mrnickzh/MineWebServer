@@ -5,6 +5,7 @@
 #include <deque>
 #include <iostream>
 #include <algorithm>
+#include <mutex>
 #include <Server.hpp>
 
 #include "PerlinNoise.hpp"
@@ -594,6 +595,7 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos, Block pr
             }
             if (block != nullptr && block->id != 0 && (block->lightLevels[3].x < r.second || r.second == 0)) {
                 // std::cout << "front" << std::endl;
+                std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
                 affectedChunks.insert(resultChunk);
                 block->lightLevels[3].x = r.second;
             }
@@ -611,6 +613,7 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos, Block pr
             }
             if (block != nullptr && block->id != 0 && (block->lightLevels[2].x < r.second || r.second == 0)) {
                 // std::cout << "back" << std::endl;
+                std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
                 affectedChunks.insert(resultChunk);
                 block->lightLevels[2].x = r.second;
             }
@@ -629,6 +632,7 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos, Block pr
             }
             if (block != nullptr && block->id != 0 && (block->lightLevels[5].x < r.second || r.second == 0)) {
                 // std::cout << "top" << std::endl;
+                std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
                 affectedChunks.insert(resultChunk);
                 block->lightLevels[5].x = r.second;
             }
@@ -646,6 +650,7 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos, Block pr
             }
             if (block != nullptr && block->id != 0 && (block->lightLevels[4].x < r.second || r.second == 0)) {
                 // std::cout << "bottom" << std::endl;
+                std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
                 affectedChunks.insert(resultChunk);
                 block->lightLevels[4].x = r.second;
             }
@@ -664,6 +669,7 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos, Block pr
             }
             if (block != nullptr && block->id != 0 && (block->lightLevels[1].x < r.second || r.second == 0)) {
                 // std::cout << "right" << std::endl;
+                std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
                 affectedChunks.insert(resultChunk);
                 block->lightLevels[1].x = r.second;
             }
@@ -681,6 +687,7 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos, Block pr
             }
             if (block != nullptr && block->id != 0 && (block->lightLevels[0].x < r.second || r.second == 0)) {
                 // std::cout << "left" << std::endl;
+                std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
                 affectedChunks.insert(resultChunk);
                 block->lightLevels[0].x = r.second;
             }
@@ -691,6 +698,7 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos, Block pr
 }
 
 void ServerChunkMap::resetAmbient() {
+    std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
     for (auto& b : blocks) {
         // printf("%f %f %f block\n", b.first.x, b.first.y, b.first.z);
         if (b.second->id != 0) {
@@ -970,6 +978,7 @@ std::set<Vec3<float>> ServerChunkMap::checkAmbient(Vec3<float> chunkPos) {
             }
             if (block != nullptr && block->id != 0 && block->lightLevels[3].y < r.second) {
                 // std::cout << "front" << std::endl;
+                std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
                 block->lightLevels[3].y = r.second;
             }
         }
@@ -997,6 +1006,7 @@ std::set<Vec3<float>> ServerChunkMap::checkAmbient(Vec3<float> chunkPos) {
             }
             if (block != nullptr && block->id != 0 && block->lightLevels[2].y < r.second) {
                 // std::cout << "back" << std::endl;
+                std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
                 block->lightLevels[2].y = r.second;
             }
         }
@@ -1029,6 +1039,7 @@ std::set<Vec3<float>> ServerChunkMap::checkAmbient(Vec3<float> chunkPos) {
             }
             if (block != nullptr && block->id != 0 && block->lightLevels[5].y < r.second) {
                 // std::cout << "top" << std::endl;
+                std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
                 block->lightLevels[5].y = r.second;
             }
         }
@@ -1056,6 +1067,7 @@ std::set<Vec3<float>> ServerChunkMap::checkAmbient(Vec3<float> chunkPos) {
             }
             if (block != nullptr && block->id != 0 && block->lightLevels[4].y < r.second) {
                 // std::cout << "bottom" << std::endl;
+                std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
                 block->lightLevels[4].y = r.second;
             }
         }
@@ -1084,6 +1096,7 @@ std::set<Vec3<float>> ServerChunkMap::checkAmbient(Vec3<float> chunkPos) {
             }
             if (block != nullptr && block->id != 0 && block->lightLevels[1].y < r.second) {
                 // std::cout << "right" << std::endl;
+                std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
                 block->lightLevels[1].y = r.second;
             }
         }
@@ -1111,6 +1124,7 @@ std::set<Vec3<float>> ServerChunkMap::checkAmbient(Vec3<float> chunkPos) {
             }
             if (block != nullptr && block->id != 0 && block->lightLevels[0].y < r.second) {
                 // std::cout << "left" << std::endl;
+                std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
                 block->lightLevels[0].y = r.second;
             }
         }
@@ -1122,26 +1136,26 @@ std::set<Vec3<float>> ServerChunkMap::checkHeight(Vec3<float> chunkPos, Vec3<flo
     std::set<Vec3<float>> affectedChunks;
     affectedChunks.insert(chunkPos);
 
-    // if (blockPos.x == 0.0f && Server::getInstance().chunks.count(Vec3<float>(chunkPos.x - 1.0f, chunkPos.y, chunkPos.z))) {
-    //     affectedChunks.insert(Vec3<float>(chunkPos.x - 1.0f, chunkPos.y, chunkPos.z));
-    // }
-    // if (blockPos.x == 7.0f && Server::getInstance().chunks.count(Vec3<float>(chunkPos.x + 1.0f, chunkPos.y, chunkPos.z))) {
-    //     affectedChunks.insert(Vec3<float>(chunkPos.x + 1.0f, chunkPos.y, chunkPos.z));
-    // }
-    //
-    // if (blockPos.y == 0.0f && Server::getInstance().chunks.count(Vec3<float>(chunkPos.x, chunkPos.y - 1.0f, chunkPos.z))) {
-    //     affectedChunks.insert(Vec3<float>(chunkPos.x, chunkPos.y - 1.0f, chunkPos.z));
-    // }
-    // if (blockPos.y == 7.0f && Server::getInstance().chunks.count(Vec3<float>(chunkPos.x, chunkPos.y + 1.0f, chunkPos.z))) {
-    //     affectedChunks.insert(Vec3<float>(chunkPos.x, chunkPos.y + 1.0f, chunkPos.z));
-    // }
-    //
-    // if (blockPos.z == 0.0f && Server::getInstance().chunks.count(Vec3<float>(chunkPos.x, chunkPos.y, chunkPos.z - 1.0f))) {
-    //     affectedChunks.insert(Vec3<float>(chunkPos.x, chunkPos.y, chunkPos.z - 1.0f));
-    // }
-    // if (blockPos.z == 7.0f && Server::getInstance().chunks.count(Vec3<float>(chunkPos.x, chunkPos.y, chunkPos.z + 1.0f))) {
-    //     affectedChunks.insert(Vec3<float>(chunkPos.x, chunkPos.y, chunkPos.z + 1.0f));
-    // }
+    if (blockPos.x == 0.0f && Server::getInstance().chunks.count(Vec3<float>(chunkPos.x - 1.0f, chunkPos.y, chunkPos.z))) {
+        affectedChunks.insert(Vec3<float>(chunkPos.x - 1.0f, chunkPos.y, chunkPos.z));
+    }
+    if (blockPos.x == 7.0f && Server::getInstance().chunks.count(Vec3<float>(chunkPos.x + 1.0f, chunkPos.y, chunkPos.z))) {
+        affectedChunks.insert(Vec3<float>(chunkPos.x + 1.0f, chunkPos.y, chunkPos.z));
+    }
+
+    if (blockPos.y == 0.0f && Server::getInstance().chunks.count(Vec3<float>(chunkPos.x, chunkPos.y - 1.0f, chunkPos.z))) {
+        affectedChunks.insert(Vec3<float>(chunkPos.x, chunkPos.y - 1.0f, chunkPos.z));
+    }
+    if (blockPos.y == 7.0f && Server::getInstance().chunks.count(Vec3<float>(chunkPos.x, chunkPos.y + 1.0f, chunkPos.z))) {
+        affectedChunks.insert(Vec3<float>(chunkPos.x, chunkPos.y + 1.0f, chunkPos.z));
+    }
+
+    if (blockPos.z == 0.0f && Server::getInstance().chunks.count(Vec3<float>(chunkPos.x, chunkPos.y, chunkPos.z - 1.0f))) {
+        affectedChunks.insert(Vec3<float>(chunkPos.x, chunkPos.y, chunkPos.z - 1.0f));
+    }
+    if (blockPos.z == 7.0f && Server::getInstance().chunks.count(Vec3<float>(chunkPos.x, chunkPos.y, chunkPos.z + 1.0f))) {
+        affectedChunks.insert(Vec3<float>(chunkPos.x, chunkPos.y, chunkPos.z + 1.0f));
+    }
 
     if (!HeightMap::getInstance().heightMaps.count(Vec2<float>(chunkPos.x, chunkPos.z))) { return affectedChunks; }
 

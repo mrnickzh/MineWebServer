@@ -21,6 +21,68 @@ void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>
         std::filesystem::create_directory("regions");
     }
 
+    std::thread lightupdater([&]() {
+        while (true) {
+            // std::cout << lightUpdateQueue.size() << " queue" << std::endl;
+            std::set<Vec3<float>> affectedChunks;
+            std::set<Vec3<float>> updatedChunks;
+            std::deque<std::pair<Vec3<float>, Block>> tempLightQueue;
+            for (auto p : Server::getInstance().lightUpdateFallbackQueue) {
+                std::lock_guard<std::mutex> guard(lightUpdateFallbackQueueMutex);
+                tempLightQueue.push_back(p);
+                Server::getInstance().lightUpdateFallbackQueue.pop_front();
+            }
+            while (!tempLightQueue.empty()) {
+                std::lock_guard<std::mutex> guard(lightUpdateQueueMutex);
+                lightUpdateQueue.push_back(tempLightQueue.front());
+                tempLightQueue.pop_front();
+            }
+            while (!lightUpdateQueue.empty()) {
+                std::lock_guard<std::mutex> guard(lightUpdateQueueMutex);
+                std::pair<Vec3<float>, Block> lightChunk = lightUpdateQueue.front();
+                {
+                    std::set<Vec3<float>> L_affectedChunks;
+                    std::set<Vec3<float>> A_affectedChunks;
+
+                    A_affectedChunks = Server::getInstance().chunks[lightChunk.first]->checkHeight(lightChunk.first, lightChunk.second.position);
+                    L_affectedChunks = Server::getInstance().chunks[lightChunk.first]->checkLights(lightChunk.first, lightChunk.second);
+
+                    for (auto c : L_affectedChunks) {
+                        affectedChunks.insert(c);
+                        Server::getInstance().chunks[c]->checkLights(c, Block(0, Vec3<float>(0.0f, 0.0f, 0.0f)));
+                    }
+                    for (auto c : A_affectedChunks) {
+                        affectedChunks.insert(c);
+                        std::set<Vec3<float>> chunks = Server::getInstance().chunks[c]->checkAmbient(c);
+                        for (auto& a : chunks) {
+                            affectedChunks.insert(a);
+                        }
+                    }
+                }
+                lightUpdateQueue.pop_front();
+            }
+            // std::cout << affectedChunks.size() << " size" << std::endl;
+            for (auto c : affectedChunks) {
+                Server::getInstance().chunks[c]->resetAmbient();
+            }
+            for (auto c : affectedChunks) {
+                std::set<Vec3<float>> chunks = Server::getInstance().chunks[c]->checkAmbient(c);
+                for (auto& a : chunks) {
+                    updatedChunks.insert(a);
+                }
+            }
+            for (auto c : updatedChunks) {
+                LightMapServer lightpacket;
+                lightpacket.chunkpos = c;
+                for (auto& s : Server::getInstance().clients) {
+                    Server::getInstance().sendPacket(s.first, &lightpacket);
+                }
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+    });
+    lightupdater.detach();
+
 #ifndef BUILD_TYPE_DEDICATED
     std::thread packetprocessor([&]() {
         while (true) {
@@ -65,6 +127,7 @@ void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>
                             for (int z = 0; z < 8; z++) {
                                 Vec3<float> regionChunk = Vec3<float>((region.x * 8.0f) + (float)x, (region.y * 8.0f) + (float)y, (region.z * 8.0f) + (float)z);
                                 if (Server::getInstance().chunks.find(regionChunk) != Server::getInstance().chunks.end()) {
+                                    std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
                                     Server::getInstance().chunks.erase(regionChunk);
                                 }
                             }

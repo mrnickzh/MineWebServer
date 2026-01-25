@@ -57,6 +57,12 @@ public:
     std::map<Vec3<float>, std::shared_ptr<ServerChunkMap>> chunks;
     std::set<ServerEntity> entities;
 
+    std::mutex chunksMutex;
+    std::mutex lightUpdateQueueMutex;
+    std::mutex lightUpdateFallbackQueueMutex;
+    std::deque<std::pair<Vec3<float>, Block>> lightUpdateQueue;
+    std::deque<std::pair<Vec3<float>, Block>> lightUpdateFallbackQueue;
+
 #ifndef BUILD_TYPE_DEDICATED
     std::mutex serverPacketQueueMutex;
     std::deque<std::pair<ClientSession*, std::vector<uint8_t>>> serverPacketQueue;
