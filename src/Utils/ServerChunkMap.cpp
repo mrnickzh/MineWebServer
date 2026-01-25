@@ -35,15 +35,10 @@ void ServerChunkMap::generateOres(Vec3<float> chunkPos,  int oreBlockId, int clu
             ^ (uint64_t(oreBlockId) * 31ULL);
     std::mt19937 rng(seed);
 
-    std::uniform_int_distribution<int> distX(0, 7);
-    std::uniform_int_distribution<int> distY(0, 7);
-    std::uniform_int_distribution<int> distZ(0, 7);
-    std::uniform_int_distribution<int> step(-1, 1);
-
     for (int i = 0; i < clusterCount; i++) {
-        int x = distX(rng);
-        int y = distY(rng);
-        int z = distZ(rng);
+        int x = ((int)(rng() % 8));
+        int y = ((int)(rng() % 8));
+        int z = ((int)(rng() % 8));
 
         int worldY = int(chunkPos.y) * 8 + y;
         if (worldY < minY || worldY > maxY)
@@ -60,9 +55,9 @@ void ServerChunkMap::generateOres(Vec3<float> chunkPos,  int oreBlockId, int clu
             if(it->second->id != 1) continue;
             it->second = std::make_shared<Block>(oreBlockId, pos);
 
-            x += step(rng);
-            y += step(rng);
-            z += step(rng);
+            x += ((int)(rng() % 3)) - 1;
+            y += ((int)(rng() % 3)) - 1;
+            z += ((int)(rng() % 3)) - 1;
         }
     }
 }

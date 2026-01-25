@@ -33,12 +33,10 @@ public:
     SeedMap(uint32_t initialSeed) : initialSeed(initialSeed){
         std::mt19937 random(initialSeed);
 
-        std::uniform_int_distribution<uint64_t> dist(0, INT64_MAX);
-
-        seedTerrain = dist(random);
-        seedStructures = dist(random);
-        seedCaves = dist(random);
-        seedOres = dist(random);
+        seedTerrain = random();
+        seedStructures = random();
+        seedCaves = random();
+        seedOres = random();
 
         printf("seed terrain %llu \n", (unsigned long long) seedTerrain);
         printf("seed caves %llu \n", (unsigned long long) seedCaves);
