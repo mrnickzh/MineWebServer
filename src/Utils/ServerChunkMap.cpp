@@ -166,203 +166,11 @@ void ServerChunkMap::resetLights() {
     }
 }
 
-std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos, Block prevblock) {
+std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos) {
     std::map<std::pair<Vec3<float>, Vec3<float>>, int> lightResult;
     std::set<Vec3<float>> affectedChunks;
     affectedChunks.insert(chunkPos);
     // int ch = 0;
-
-    if (prevblock.id == 5) {
-        int lightIntensity = 5;
-        std::map<std::pair<Vec3<float>, Vec3<float>>, int> lightQueue;
-        lightQueue[std::make_pair(chunkPos, prevblock.position)] = 0;
-        while (!lightQueue.empty() && lightIntensity > 1) {
-            // std::cout << lightQueue.size() << std::endl;
-            std::map<std::pair<Vec3<float>, Vec3<float>>, int> tempQueue;
-            for (auto& l : lightQueue) {
-                // x
-                // printf("%f %f %f chunk\n", l.first.first.x, l.first.first.y, l.first.first.z);
-                // printf("%f %f %f block\n", l.first.second.x, l.first.second.y, l.first.second.z);
-                // if (l.first.first.x == 0.0f && l.first.first.y == 0.0f && l.first.first.z == -1.0f) {
-                //     printf("%f %f %f chunk %f %f %f block %d lvl\n", l.first.first.x, l.first.first.y, l.first.first.z, l.first.second.x, l.first.second.y, l.first.second.z, l.second);
-                // }
-                {
-                    float x = l.first.second.x - 1.0f;
-                    Vec3<float> lightPos = Vec3<float>(x, l.first.second.y, l.first.second.z);
-                    Vec3<float> lightChunk = l.first.first;
-                    std::shared_ptr<Block> block = nullptr;
-                    if (x < 0.0f) {
-                        x = 7.0f;
-                        if (Server::getInstance().chunks.count(Vec3<float>(lightChunk.x - 1.0f, lightChunk.y, lightChunk.z)) && checkValidPos(Vec3<float>(x, l.first.second.y, l.first.second.z))) {
-                            lightPos = Vec3<float>(x, l.first.second.y, l.first.second.z);
-                            lightChunk = Vec3<float>(lightChunk.x - 1.0f, lightChunk.y, lightChunk.z);
-                            block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
-                        }
-                    }
-                    // if ((l.first.first.x == 0.0f && l.first.first.y == 0.0f && l.first.first.z == -1.0f) && !checkValidPos(Vec3<float>(lightPos.x, lightPos.y, lightPos.z))) {
-                    //     printf("%f %f %f block\n", l.first.second.x, l.first.second.y, l.first.second.z);
-                    // }
-                    else if (checkValidPos(Vec3<float>(lightPos.x, lightPos.y, lightPos.z))) {
-                        block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
-                    }
-                    if (block != nullptr && block->id == 0) {
-                        std::pair<Vec3<float>, Vec3<float>> lightBlock = std::make_pair(lightChunk, lightPos);
-                        if (!tempQueue.count(lightBlock)) {
-                            tempQueue[lightBlock] = lightIntensity - 1;
-                        }
-                        if (!lightResult.count(lightBlock)) {
-                            affectedChunks.insert(lightChunk);
-                            lightResult[lightBlock] = 0;
-                        }
-                    }
-                }
-                {
-                    float x = l.first.second.x + 1.0f;
-                    Vec3<float> lightPos = Vec3<float>(x, l.first.second.y, l.first.second.z);
-                    Vec3<float> lightChunk = l.first.first;
-                    std::shared_ptr<Block> block = nullptr;
-                    if (x > 7.0f) {
-                        x = 0.0f;
-                        if (Server::getInstance().chunks.count(Vec3<float>(lightChunk.x + 1.0f, lightChunk.y, lightChunk.z)) && checkValidPos(Vec3<float>(x, l.first.second.y, l.first.second.z))) {
-                            lightPos = Vec3<float>(x, l.first.second.y, l.first.second.z);
-                            lightChunk = Vec3<float>(lightChunk.x + 1.0f, lightChunk.y, lightChunk.z);
-                            block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
-                        }
-                    }
-                    else if (checkValidPos(Vec3<float>(lightPos.x, lightPos.y, lightPos.z))) {
-                        block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
-                    }
-                    if (block != nullptr && block->id == 0) {
-                        std::pair<Vec3<float>, Vec3<float>> lightBlock = std::make_pair(lightChunk, lightPos);
-                        if (!tempQueue.count(lightBlock)) {
-                            tempQueue[lightBlock] = lightIntensity - 1;
-                        }
-                        if (!lightResult.count(lightBlock)) {
-                            affectedChunks.insert(lightChunk);
-                            lightResult[lightBlock] = 0;
-                        }
-                    }
-                }
-                // y
-                {
-                    float y = l.first.second.y - 1.0f;
-                    Vec3<float> lightPos = Vec3<float>(l.first.second.x, y, l.first.second.z);
-                    Vec3<float> lightChunk = l.first.first;
-                    std::shared_ptr<Block> block = nullptr;
-                    if (y < 0.0f) {
-                        y = 7.0f;
-                        if (Server::getInstance().chunks.count(Vec3<float>(lightChunk.x, lightChunk.y - 1.0f, lightChunk.z)) && checkValidPos(Vec3<float>(l.first.second.x, y, l.first.second.z))) {
-                            lightPos = Vec3<float>(l.first.second.x, y, l.first.second.z);
-                            lightChunk = Vec3<float>(lightChunk.x, lightChunk.y - 1.0f, lightChunk.z);
-                            block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
-                        }
-                    }
-                    else if (checkValidPos(Vec3<float>(lightPos.x, lightPos.y, lightPos.z))) {
-                        block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
-                    }
-                    if (block != nullptr && block->id == 0) {
-                        std::pair<Vec3<float>, Vec3<float>> lightBlock = std::make_pair(lightChunk, lightPos);
-                        if (!tempQueue.count(lightBlock)) {
-                            tempQueue[lightBlock] = lightIntensity - 1;
-                        }
-                        if (!lightResult.count(lightBlock)) {
-                            affectedChunks.insert(lightChunk);
-                            lightResult[lightBlock] = 0;
-                        }
-                    }
-                }
-                {
-                    float y = l.first.second.y + 1.0f;
-                    Vec3<float> lightPos = Vec3<float>(l.first.second.x, y, l.first.second.z);
-                    Vec3<float> lightChunk = l.first.first;
-                    std::shared_ptr<Block> block = nullptr;
-                    if (y > 7.0f) {
-                        y = 0.0f;
-                        if (Server::getInstance().chunks.count(Vec3<float>(lightChunk.x, lightChunk.y + 1.0f, lightChunk.z)) && checkValidPos(Vec3<float>(l.first.second.x, y, l.first.second.z))) {
-                            lightPos = Vec3<float>(l.first.second.x, y, l.first.second.z);
-                            lightChunk = Vec3<float>(lightChunk.x, lightChunk.y + 1.0f, lightChunk.z);
-                            block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
-                        }
-                    }
-                    else if (checkValidPos(Vec3<float>(lightPos.x, lightPos.y, lightPos.z))) {
-                        block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
-                    }
-                    if (block != nullptr && block->id == 0) {
-                        std::pair<Vec3<float>, Vec3<float>> lightBlock = std::make_pair(lightChunk, lightPos);
-                        if (!tempQueue.count(lightBlock)) {
-                            tempQueue[lightBlock] = lightIntensity - 1;
-                        }
-                        if (!lightResult.count(lightBlock)) {
-                            affectedChunks.insert(lightChunk);
-                            lightResult[lightBlock] = 0;
-                        }
-                    }
-                }
-                // z
-                {
-                    float z = l.first.second.z - 1.0f;
-                    Vec3<float> lightPos = Vec3<float>(l.first.second.x, l.first.second.y, z);
-                    Vec3<float> lightChunk = l.first.first;
-                    std::shared_ptr<Block> block = nullptr;
-                    if (z < 0.0f) {
-                        z = 7.0f;
-                        if (Server::getInstance().chunks.count(Vec3<float>(lightChunk.x, lightChunk.y, lightChunk.z - 1.0f)) && checkValidPos(Vec3<float>(l.first.second.x, l.first.second.y, z))) {
-                            lightPos = Vec3<float>(l.first.second.x, l.first.second.y, z);
-                            lightChunk = Vec3<float>(lightChunk.x, lightChunk.y, lightChunk.z - 1.0f);
-                            block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
-                        }
-                    }
-                    else if (checkValidPos(Vec3<float>(lightPos.x, lightPos.y, lightPos.z))) {
-                        block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
-                    }
-                    // if (l.first.first.x == 0.0f && l.first.first.y == 0.0f && l.first.first.z == -1.0f) {
-                    //     printf("%f %f %f chunk %f %f %f block %d lvl ZZZ\n", lightChunk.x, lightChunk.y, lightChunk.z, lightPos.x, lightPos.y, lightPos.z, l.second);
-                    //     printf("%d test1\n", (int)(block != nullptr));
-                    //     printf("%d test2\n", (int)(block->id == 0));
-                    // }
-                    if (block != nullptr && block->id == 0) {
-                        std::pair<Vec3<float>, Vec3<float>> lightBlock = std::make_pair(lightChunk, lightPos);
-                        if (!tempQueue.count(lightBlock)) {
-                            tempQueue[lightBlock] = lightIntensity - 1;
-                        }
-                        if (!lightResult.count(lightBlock)) {
-                            lightResult[lightBlock] = 0;
-                            affectedChunks.insert(lightChunk);
-                        }
-                    }
-                }
-                {
-                    float z = l.first.second.z + 1.0f;
-                    Vec3<float> lightPos = Vec3<float>(l.first.second.x, l.first.second.y, z);
-                    Vec3<float> lightChunk = l.first.first;
-                    std::shared_ptr<Block> block = nullptr;
-                    if (z > 7.0f) {
-                        z = 0.0f;
-                        if (Server::getInstance().chunks.count(Vec3<float>(lightChunk.x, lightChunk.y, lightChunk.z + 1.0f)) && checkValidPos(Vec3<float>(l.first.second.x, l.first.second.y, z))) {
-                            lightPos = Vec3<float>(l.first.second.x, l.first.second.y, z);
-                            lightChunk = Vec3<float>(lightChunk.x, lightChunk.y, lightChunk.z + 1.0f);
-                            block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
-                        }
-                    }
-                    else if (checkValidPos(Vec3<float>(lightPos.x, lightPos.y, lightPos.z))) {
-                        block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
-                    }
-                    if (block != nullptr && block->id == 0) {
-                        std::pair<Vec3<float>, Vec3<float>> lightBlock = std::make_pair(lightChunk, lightPos);
-                        if (!tempQueue.count(lightBlock)) {
-                            tempQueue[lightBlock] = lightIntensity - 1;
-                        }
-                        if (!lightResult.count(lightBlock)) {
-                            lightResult[lightBlock] = 0;
-                            affectedChunks.insert(lightChunk);
-                        }
-                    }
-                }
-            }
-            lightIntensity -= 1;
-            lightQueue = tempQueue;
-        }
-    }
 
     int lightIntensity = 5;
     std::map<std::pair<Vec3<float>, Vec3<float>>, int> lightQueue;
@@ -588,7 +396,7 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos, Block pr
             if (checkValidPos(resultBlock)) {
                 block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
             }
-            if (block != nullptr && block->id != 0 && (block->lightLevels[3].x < r.second || r.second == 0)) {
+            if (block != nullptr && block->id != 0 && (block->lightLevels[3].x < r.second)) {
                 // std::cout << "front" << std::endl;
                 std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
                 affectedChunks.insert(resultChunk);
@@ -606,7 +414,7 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos, Block pr
             if (checkValidPos(resultBlock)) {
                 block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
             }
-            if (block != nullptr && block->id != 0 && (block->lightLevels[2].x < r.second || r.second == 0)) {
+            if (block != nullptr && block->id != 0 && (block->lightLevels[2].x < r.second)) {
                 // std::cout << "back" << std::endl;
                 std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
                 affectedChunks.insert(resultChunk);
@@ -625,7 +433,7 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos, Block pr
             if (checkValidPos(resultBlock)) {
                 block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
             }
-            if (block != nullptr && block->id != 0 && (block->lightLevels[5].x < r.second || r.second == 0)) {
+            if (block != nullptr && block->id != 0 && (block->lightLevels[5].x < r.second)) {
                 // std::cout << "top" << std::endl;
                 std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
                 affectedChunks.insert(resultChunk);
@@ -643,7 +451,7 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos, Block pr
             if (checkValidPos(resultBlock)) {
                 block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
             }
-            if (block != nullptr && block->id != 0 && (block->lightLevels[4].x < r.second || r.second == 0)) {
+            if (block != nullptr && block->id != 0 && (block->lightLevels[4].x < r.second)) {
                 // std::cout << "bottom" << std::endl;
                 std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
                 affectedChunks.insert(resultChunk);
@@ -662,7 +470,7 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos, Block pr
             if (checkValidPos(resultBlock)) {
                 block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
             }
-            if (block != nullptr && block->id != 0 && (block->lightLevels[1].x < r.second || r.second == 0)) {
+            if (block != nullptr && block->id != 0 && (block->lightLevels[1].x < r.second)) {
                 // std::cout << "right" << std::endl;
                 std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
                 affectedChunks.insert(resultChunk);
@@ -680,7 +488,7 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos, Block pr
             if (checkValidPos(resultBlock)) {
                 block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
             }
-            if (block != nullptr && block->id != 0 && (block->lightLevels[0].x < r.second || r.second == 0)) {
+            if (block != nullptr && block->id != 0 && (block->lightLevels[0].x < r.second)) {
                 // std::cout << "left" << std::endl;
                 std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
                 affectedChunks.insert(resultChunk);
