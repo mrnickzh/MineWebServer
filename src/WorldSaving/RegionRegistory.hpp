@@ -132,7 +132,6 @@ public:
     }
 
     void exportAll() {
-        std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
         std::set<Vec3<float>> savedRegions;
         auto serverChunks = Server::getInstance().chunks;
 
@@ -205,7 +204,6 @@ public:
     }
 
     void importAll() {
-        std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
         std::ostringstream ss;
 #ifdef BUILD_TYPE_DEDICATED
         ss << "world.mww";
