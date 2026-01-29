@@ -132,6 +132,28 @@ public:
     }
 
     void exportAll() {
+        ByteBuf heightbuffer(16777216);
+        auto heightMaps = HeightMap::getInstance().heightMaps;
+        heightbuffer.writeInt((int)heightMaps.size());
+        std::cout << (int)heightMaps.size() << " hm" << std::endl;
+        for (auto& hm : heightMaps) {
+            heightbuffer.writeFloat(hm.first.x);
+            heightbuffer.writeFloat(hm.first.y);
+            heightbuffer.writeInt((int)hm.second.size());
+            for (auto& m : hm.second) {
+                heightbuffer.writeFloat(m.first);
+                heightbuffer.writeFloat(m.second.x);
+                heightbuffer.writeFloat(m.second.y);
+                heightbuffer.writeFloat(m.second.z);
+            }
+        }
+
+        ByteBuf tmpsize(sizeof(uint32_t));
+        tmpsize.writeInt((int)heightbuffer.toByteArray().size());
+        std::vector<uint8_t> outbuffer = tmpsize.toByteArray();
+        std::vector<uint8_t> hbv = heightbuffer.toByteArray();
+        outbuffer.insert(outbuffer.end(), hbv.begin(), hbv.end());
+
         std::set<Vec3<float>> savedRegions;
         auto serverChunks = Server::getInstance().chunks;
 
@@ -191,7 +213,8 @@ public:
         // }
         // std::cout << strdata << std::endl;
 
-        std::vector<uint8_t> outbuffer = ZLibUtils::compress_data(worldbuffer);
+        outbuffer.insert(outbuffer.end(), worldbuffer.begin(), worldbuffer.end());
+        std::vector<uint8_t> cmpbuffer =  ZLibUtils::compress_data(outbuffer);
 #ifdef BUILD_TYPE_DEDICATED
         std::ofstream file("world.mww", std::ios::binary);
 #else
@@ -199,7 +222,7 @@ public:
 #endif
         // std::cout << worldbuffer.size() << std::endl;
         // std::cout << outbuffer.size() << std::endl;
-        file.write(reinterpret_cast<const char*>(outbuffer.data()), outbuffer.size());
+        file.write(reinterpret_cast<const char*>(cmpbuffer.data()), cmpbuffer.size());
         file.close();
     }
 
@@ -221,9 +244,41 @@ public:
         std::vector<uint8_t> buffer(size);
         file.read(reinterpret_cast<char*>(buffer.data()), size);
         file.close();
+        std::vector<uint8_t> cmpbuffer = ZLibUtils::decompress_data(buffer);
 
-        std::vector<uint8_t> worldbuffer = ZLibUtils::decompress_data(buffer);
-        // std::cout << worldbuffer.size() << std::endl;
+        int heightsize = 0;
+        std::memcpy(&heightsize, cmpbuffer.data(), sizeof(int32_t));
+        std::vector<uint8_t> heightbuffer;
+        heightbuffer.insert(heightbuffer.end(), cmpbuffer.begin() + sizeof(int32_t), cmpbuffer.begin() + sizeof(int32_t) + heightsize);
+        std::vector<uint8_t> worldbuffer;
+        worldbuffer.insert(worldbuffer.end(), cmpbuffer.begin() + sizeof(int32_t) + heightsize, cmpbuffer.end());
+
+        std::cout << heightsize << " hs" << std::endl;
+
+        ByteBuf hmbb(heightsize);
+        hmbb.fromByteArray(heightbuffer);
+        int heightlen = hmbb.readInt();
+
+        std::cout << heightlen << " hl" << std::endl;
+
+        for (int i = 0; i < heightlen; i++) {
+            std::cout << i << std::endl;
+            float hx = hmbb.readFloat();
+            float hy = hmbb.readFloat();
+            int hsize = hmbb.readInt();
+            for (int j = 0; j < hsize; j++) {
+                float cy = hmbb.readFloat();
+                float bx = hmbb.readFloat();
+                float by = hmbb.readFloat();
+                float bz = hmbb.readFloat();
+                HeightMap::getInstance().addMap(Vec2<float>(hx, hy), cy, Vec3<float>(bx, by, bz));
+            }
+        }
+
+        std::cout << cmpbuffer.size() << " cbs" << std::endl;
+        std::cout << heightbuffer.size() << " hbs" << std::endl;
+        std::cout << worldbuffer.size() << " wbs" << std::endl;
+
         long pos = 0;
 
         while (pos < worldbuffer.size()) {

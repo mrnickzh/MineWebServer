@@ -26,6 +26,12 @@ void RegionFormat_V1::load(ByteBuf &buffer, Vec3<float> pos) {
 
             Vec3<float> blockPos = Vec3(bx, by, bz);
             std::shared_ptr<Block> block = std::make_shared<Block>(id, blockPos);
+
+            for (int l = 0; l < 6; l++) {
+                block->lightLevels[l].x = buffer.readInt();
+                block->lightLevels[l].y = buffer.readInt();
+            }
+
             chunkMap->blocks[blockPos] = block;
         }
 
@@ -75,6 +81,10 @@ void RegionFormat_V1::save(ByteBuf &buffer, Vec3<float> pos) {
                     buffer.writeFloat(blockPair.first.y);
                     buffer.writeFloat(blockPair.first.z);
                     buffer.writeInt(blockPair.second->id);
+                    for (int l = 0; l < 6; l++) {
+                        buffer.writeInt(blockPair.second->lightLevels[l].x);
+                        buffer.writeInt(blockPair.second->lightLevels[l].y);
+                    }
                 }
             }
         }
