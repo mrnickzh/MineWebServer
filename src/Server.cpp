@@ -49,8 +49,10 @@ void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>
                     L_affectedChunks = Server::getInstance().chunks[lightChunk.first]->checkLights(lightChunk.first);
 
                     for (auto c : L_affectedChunks) {
-                        affectedChunks.insert(c);
                         Server::getInstance().chunks[c]->resetLights();
+                    }
+                    for (auto c : L_affectedChunks) {
+                        affectedChunks.insert(c);
                         Server::getInstance().chunks[c]->checkLights(c);
                     }
                     for (auto c : A_affectedChunks) {
