@@ -46,14 +46,14 @@ void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>
 
                     A_affectedChunks = Server::getInstance().chunks[lightChunk.first]->checkHeight(lightChunk.first, lightChunk.second.position);
                     Server::getInstance().chunks[lightChunk.first]->resetLights();
-                    L_affectedChunks = Server::getInstance().chunks[lightChunk.first]->checkLights(lightChunk.first);
+                    L_affectedChunks = Server::getInstance().chunks[lightChunk.first]->checkLights(lightChunk.first, lightChunk.second);
 
                     for (auto c : L_affectedChunks) {
                         Server::getInstance().chunks[c]->resetLights();
                     }
                     for (auto c : L_affectedChunks) {
                         affectedChunks.insert(c);
-                        Server::getInstance().chunks[c]->checkLights(c);
+                        Server::getInstance().chunks[c]->checkLights(c, Block(0, Vec3<float>(0.0f, 0.0f, 0.0f)));
                     }
                     for (auto c : A_affectedChunks) {
                         affectedChunks.insert(c);
