@@ -32,7 +32,7 @@ void RegionFormat_V1::load(ByteBuf &buffer, Vec3<float> pos) {
                 block->lightLevels[l].y = buffer.readInt();
             }
 
-            chunkMap->blocks[blockPos] = block;
+            chunkMap->addBlock(blockPos, block);
         }
 
         // std::cout << regionChunk.x << " " << regionChunk.y << " " << regionChunk.z << " regionchunk" << std::endl;
@@ -77,13 +77,13 @@ void RegionFormat_V1::save(ByteBuf &buffer, Vec3<float> pos) {
                 buffer.writeFloat(regionChunk.y);
                 buffer.writeFloat(regionChunk.z);
                 for(auto& blockPair : map->blocks){
-                    buffer.writeFloat(blockPair.first.x);
-                    buffer.writeFloat(blockPair.first.y);
-                    buffer.writeFloat(blockPair.first.z);
-                    buffer.writeInt(blockPair.second->id);
+                    buffer.writeFloat(blockPair->position.x);
+                    buffer.writeFloat(blockPair->position.y);
+                    buffer.writeFloat(blockPair->position.z);
+                    buffer.writeInt(blockPair->id);
                     for (int l = 0; l < 6; l++) {
-                        buffer.writeInt(blockPair.second->lightLevels[l].x);
-                        buffer.writeInt(blockPair.second->lightLevels[l].y);
+                        buffer.writeInt(blockPair->lightLevels[l].x);
+                        buffer.writeInt(blockPair->lightLevels[l].y);
                     }
                 }
             }

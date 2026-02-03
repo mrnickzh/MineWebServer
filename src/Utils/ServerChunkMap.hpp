@@ -2,13 +2,15 @@
 #include <map>
 #include <memory>
 #include <set>
+#include <array>
 
 #include "Block.hpp"
 #include "PerlinNoise.hpp"
 
 class ServerChunkMap {
 public:
-    std::map<Vec3<float>, std::shared_ptr<Block>> blocks;
+    // std::map<Vec3<float>, std::shared_ptr<Block>> blocks;
+    std::array<std::shared_ptr<Block>, 512> blocks;
 
     void addBlock(Vec3<float> blockPos, std::shared_ptr<Block> block);
     std::shared_ptr<Block> getBlock(Vec3<float> blockPos);

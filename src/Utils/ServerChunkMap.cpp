@@ -18,12 +18,12 @@ bool checkValidPos(Vec3<float> pos) {
 }
 
 void ServerChunkMap::addBlock(Vec3<float> blockPos, std::shared_ptr<Block> block) {
-    blocks[blockPos] = block;
+    blocks[(int)(blockPos.x * 64 + blockPos.y * 8 + blockPos.z)] = block;
 }
 
 std::shared_ptr<Block> ServerChunkMap::getBlock(Vec3<float> blockPos) {
-    if (!checkValidPos(blockPos)) { printf("%f %f %f bad\n", blockPos.x, blockPos.y, blockPos.z); }
-    return blocks[blockPos];
+    // if (!checkValidPos(blockPos)) { printf("%f %f %f bad\n", blockPos.x, blockPos.y, blockPos.z); }
+    return blocks[(int)(blockPos.x * 64 + blockPos.y * 8 + blockPos.z)];
 }
 
 void ServerChunkMap::generateOres(Vec3<float> chunkPos,  int oreBlockId, int clusterCount, int clusterSize, int minY, int maxY) {
@@ -50,10 +50,10 @@ void ServerChunkMap::generateOres(Vec3<float> chunkPos,  int oreBlockId, int clu
 
             Vec3<float> pos((float)x, (float)y, (float)z);
 
-            auto it = blocks.find(pos);
+            auto it = getBlock(pos);
 
-            if(it->second->id != 1) continue;
-            it->second = std::make_shared<Block>(oreBlockId, pos);
+            if(it->id != 1) continue;
+            addBlock(pos, std::make_shared<Block>(oreBlockId, pos));
 
             x += ((int)(rng() % 3)) - 1;
             y += ((int)(rng() % 3)) - 1;
@@ -69,7 +69,7 @@ void ServerChunkMap::generate(Vec3<float> chunkPos) {
                 for (int z = 0; z < 8; z++) {
                     Vec3<float> blockPos = Vec3((float) x, (float) y, (float) z);
                     std::shared_ptr<Block> block = std::make_shared<Block>(0, blockPos);
-                    blocks[blockPos] = block;
+                    addBlock(blockPos, block);
                 }
             }
         }
@@ -82,7 +82,7 @@ void ServerChunkMap::generate(Vec3<float> chunkPos) {
                 for (int z = 0; z < 8; z++) {
                     Vec3<float> blockPos = Vec3((float) x, (float) y, (float) z);
                     std::shared_ptr<Block> block = std::make_shared<Block>(1, blockPos);
-                    blocks[blockPos] = block;
+                    addBlock(blockPos, block);
                 }
             }
         }
@@ -110,7 +110,7 @@ void ServerChunkMap::generate(Vec3<float> chunkPos) {
                         HeightMap::getInstance().addMap(Vec2<float>(chunkPos.x, chunkPos.z), height, ambientPos);
                     }
                     std::shared_ptr<Block> block = std::make_shared<Block>(id, blockPos);
-                    blocks[blockPos] = block;
+                    addBlock(blockPos, block);
                 }
             }
         }
@@ -128,7 +128,7 @@ void ServerChunkMap::generate(Vec3<float> chunkPos) {
                 float k = (Server::getInstance().seedMap->perlinNoiseCaves->generate3D((float)wx, (float)wy, (float)wz, 0.02f) + 1.0f) / 2.0f;
 
                 if (k > 0.6f) {
-                    blocks[blockPos] = std::make_shared<Block>(0, blockPos);
+                    addBlock(blockPos, std::make_shared<Block>(0, blockPos));
                     checkHeight(chunkPos, blockPos);
                 }
             }
@@ -158,9 +158,9 @@ void ServerChunkMap::generate(Vec3<float> chunkPos) {
 void ServerChunkMap::resetLights() {
     for (auto& b : blocks) {
         // printf("%f %f %f block\n", b.first.x, b.first.y, b.first.z);
-        if (b.second->id != 0) {
+        if (b->id != 0) {
             for (int i = 0; i < 6; i++) {
-                b.second->lightLevels[i].x = 0;
+                b->lightLevels[i].x = 0;
             }
         }
     }
@@ -174,20 +174,21 @@ std::set<Vec3<float>> ServerChunkMap::checkLights(Vec3<float> chunkPos, Block pr
 
     int lightIntensity = 5;
     std::map<std::pair<Vec3<float>, Vec3<float>>, int> lightQueue;
-    std::map<Vec3<float>, std::shared_ptr<Block>> blockMap = blocks;
+    std::array<std::shared_ptr<Block>, 512> blockMap = blocks;
+    int index = 0;
     for (auto& b : blockMap) {
         // ch++;
         // std::cout << ch << " ch" << std::endl;
         // std::cout << b.second->id << " id" << std::endl;
         // printf("%f %f %f block\n", b.first.x, b.first.y, b.first.z);
         // if (b.second == nullptr) { continue; }
-        if (b.second->id == 5) {
-            Vec3<float> blockPos = b.first;
+        if (b->id == 5) {
+            Vec3<float> blockPos = b->position;
             lightQueue[std::make_pair(chunkPos, blockPos)] = lightIntensity;
             // printf("%f %f %f start\n", b.first.x, b.first.y, b.first.z);
         }
-        if (b.first == prevblock.position && prevblock.id == 5) {
-            Vec3<float> blockPos = b.first;
+        if (b->position == prevblock.position && prevblock.id == 5) {
+            Vec3<float> blockPos = b->position;
             lightQueue[std::make_pair(chunkPos, blockPos)] = -1;
             // printf("%f %f %f start\n", b.first.x, b.first.y, b.first.z);
         }
@@ -545,9 +546,9 @@ void ServerChunkMap::resetAmbient() {
     std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
     for (auto& b : blocks) {
         // printf("%f %f %f block\n", b.first.x, b.first.y, b.first.z);
-        if (b.second->id != 0) {
+        if (b->id != 0) {
             for (int i = 0; i < 6; i++) {
-                b.second->lightLevels[i].y = -5;
+                b->lightLevels[i].y = -5;
             }
         }
     }
@@ -606,7 +607,7 @@ std::set<Vec3<float>> ServerChunkMap::checkAmbient(Vec3<float> chunkPos) {
                 // }
                 else if (checkValidPos(Vec3<float>(darkPos.x, darkPos.y, darkPos.z))) {
                     if (darkChunk == chunkPos) {
-                        block = blocks[darkPos];
+                        block = getBlock(darkPos);
                     }
                     else if (Server::getInstance().chunks.count(darkChunk)) {
                         block = Server::getInstance().chunks[darkChunk]->getBlock(darkPos);
@@ -639,7 +640,7 @@ std::set<Vec3<float>> ServerChunkMap::checkAmbient(Vec3<float> chunkPos) {
                 // }
                 else if (checkValidPos(Vec3<float>(darkPos.x, darkPos.y, darkPos.z))) {
                     if (darkChunk == chunkPos) {
-                        block = blocks[darkPos];
+                        block = getBlock(darkPos);
                     }
                     else if (Server::getInstance().chunks.count(darkChunk)) {
                         block = Server::getInstance().chunks[darkChunk]->getBlock(darkPos);
@@ -673,7 +674,7 @@ std::set<Vec3<float>> ServerChunkMap::checkAmbient(Vec3<float> chunkPos) {
                 // }
                 else if (checkValidPos(Vec3<float>(darkPos.x, darkPos.y, darkPos.z))) {
                     if (darkChunk == chunkPos) {
-                        block = blocks[darkPos];
+                        block = getBlock(darkPos);
                     }
                     else if (Server::getInstance().chunks.count(darkChunk)) {
                         block = Server::getInstance().chunks[darkChunk]->getBlock(darkPos);
@@ -706,7 +707,7 @@ std::set<Vec3<float>> ServerChunkMap::checkAmbient(Vec3<float> chunkPos) {
                 // }
                 else if (checkValidPos(Vec3<float>(darkPos.x, darkPos.y, darkPos.z))) {
                     if (darkChunk == chunkPos) {
-                        block = blocks[darkPos];
+                        block = getBlock(darkPos);
                     }
                     else if (Server::getInstance().chunks.count(darkChunk)) {
                         block = Server::getInstance().chunks[darkChunk]->getBlock(darkPos);
@@ -740,7 +741,7 @@ std::set<Vec3<float>> ServerChunkMap::checkAmbient(Vec3<float> chunkPos) {
                 // }
                 else if (checkValidPos(Vec3<float>(darkPos.x, darkPos.y, darkPos.z))) {
                     if (darkChunk == chunkPos) {
-                        block = blocks[darkPos];
+                        block = getBlock(darkPos);
                     }
                     else if (Server::getInstance().chunks.count(darkChunk)) {
                         block = Server::getInstance().chunks[darkChunk]->getBlock(darkPos);
@@ -773,7 +774,7 @@ std::set<Vec3<float>> ServerChunkMap::checkAmbient(Vec3<float> chunkPos) {
                 // }
                 else if (checkValidPos(Vec3<float>(darkPos.x, darkPos.y, darkPos.z))) {
                     if (darkChunk == chunkPos) {
-                        block = blocks[darkPos];
+                        block = getBlock(darkPos);
                     }
                     else if (Server::getInstance().chunks.count(darkChunk)) {
                         block = Server::getInstance().chunks[darkChunk]->getBlock(darkPos);
@@ -811,7 +812,7 @@ std::set<Vec3<float>> ServerChunkMap::checkAmbient(Vec3<float> chunkPos) {
             }
             else if (checkValidPos(Vec3<float>(resultBlock.x, resultBlock.y, resultBlock.z))) {
                 if (resultChunk == chunkPos) {
-                    block = blocks[resultBlock];
+                    block = getBlock(resultBlock);
                 }
                 else if (Server::getInstance().chunks.count(resultChunk)) {
                     block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
@@ -839,7 +840,7 @@ std::set<Vec3<float>> ServerChunkMap::checkAmbient(Vec3<float> chunkPos) {
             }
             else if (checkValidPos(Vec3<float>(resultBlock.x, resultBlock.y, resultBlock.z))) {
                 if (resultChunk == chunkPos) {
-                    block = blocks[resultBlock];
+                    block = getBlock(resultBlock);
                 }
                 else if (Server::getInstance().chunks.count(resultChunk)) {
                     block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
@@ -868,7 +869,7 @@ std::set<Vec3<float>> ServerChunkMap::checkAmbient(Vec3<float> chunkPos) {
             }
             else if (checkValidPos(Vec3<float>(resultBlock.x, resultBlock.y, resultBlock.z))) {
                 if (resultChunk == chunkPos) {
-                    block = blocks[resultBlock];
+                    block = getBlock(resultBlock);
                 }
                 else if (Server::getInstance().chunks.count(resultChunk)) {
                     block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
@@ -900,7 +901,7 @@ std::set<Vec3<float>> ServerChunkMap::checkAmbient(Vec3<float> chunkPos) {
             }
             else if (checkValidPos(Vec3<float>(resultBlock.x, resultBlock.y, resultBlock.z))) {
                 if (resultChunk == chunkPos) {
-                    block = blocks[resultBlock];
+                    block = getBlock(resultBlock);
                 }
                 else if (Server::getInstance().chunks.count(resultChunk)) {
                     block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
@@ -929,7 +930,7 @@ std::set<Vec3<float>> ServerChunkMap::checkAmbient(Vec3<float> chunkPos) {
             }
             else if (checkValidPos(Vec3<float>(resultBlock.x, resultBlock.y, resultBlock.z))) {
                 if (resultChunk == chunkPos) {
-                    block = blocks[resultBlock];
+                    block = getBlock(resultBlock);
                 }
                 else if (Server::getInstance().chunks.count(resultChunk)) {
                     block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
@@ -957,7 +958,7 @@ std::set<Vec3<float>> ServerChunkMap::checkAmbient(Vec3<float> chunkPos) {
             }
             else if (checkValidPos(Vec3<float>(resultBlock.x, resultBlock.y, resultBlock.z))) {
                 if (resultChunk == chunkPos) {
-                    block = blocks[resultBlock];
+                    block = getBlock(resultBlock);
                 }
                 else if (Server::getInstance().chunks.count(resultChunk)) {
                     block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
@@ -1010,7 +1011,7 @@ std::set<Vec3<float>> ServerChunkMap::checkHeight(Vec3<float> chunkPos, Vec3<flo
 
     // printf("%f %f %f chunk\n", chunkPos.x, chunkPos.z, chunkPos.z);
 
-    if (res->second.y + (res->first * 8.0f) <= blockPos.y + (chunkPos.y * 8.0f) && blocks[blockPos]->id != 0) {
+    if (res->second.y + (res->first * 8.0f) <= blockPos.y + (chunkPos.y * 8.0f) && getBlock(blockPos)->id != 0) {
         float prevheight = res->first;
         if (blockPos.y + 1.0f > 7.0f) {
             res->first = chunkPos.y + 1.0f;
@@ -1024,7 +1025,7 @@ std::set<Vec3<float>> ServerChunkMap::checkHeight(Vec3<float> chunkPos, Vec3<flo
         affectedChunks.insert(Vec3<float>(chunkPos.x, res->first, chunkPos.z));
         return affectedChunks;
     }
-    if (res->second.y + (res->first * 8.0f) > blockPos.y + (chunkPos.y * 8.0f) && blocks[blockPos]->id == 0) {
+    if (res->second.y + (res->first * 8.0f) > blockPos.y + (chunkPos.y * 8.0f) && getBlock(blockPos)->id == 0) {
         float prevheight = res->first;
         float solidHeight = res->second.y;
         float chunkHeight = res->first;
@@ -1039,7 +1040,7 @@ std::set<Vec3<float>> ServerChunkMap::checkHeight(Vec3<float> chunkPos, Vec3<flo
             Vec3<float> solidPos = Vec3<float>(res->second.x, solidHeight, res->second.z);
             Vec3<float> solidChunk = Vec3<float>(chunkPos.x, chunkHeight, chunkPos.z);
 
-            if ((solidChunk.y == chunkPos.y && (blocks[solidPos]->id != 0)) || (solidChunk.y != chunkPos.y && !Server::getInstance().chunks.count(solidChunk)) || (Server::getInstance().chunks.count(solidChunk) && Server::getInstance().chunks[solidChunk]->blocks[solidPos]->id != 0)) {
+            if ((solidChunk.y == chunkPos.y && (getBlock(solidPos)->id != 0)) || (solidChunk.y != chunkPos.y && !Server::getInstance().chunks.count(solidChunk)) || (Server::getInstance().chunks.count(solidChunk) && Server::getInstance().chunks[solidChunk]->getBlock(solidPos)->id != 0)) {
                 if (solidPos.y + 1.0f > 7.0f) {
                     solidChunk.y += 1.0f;
                     solidPos.y = 0.0f;
