@@ -566,6 +566,10 @@ std::set<Vec3<float>> ServerChunkMap::checkAmbient(Vec3<float> chunkPos) {
             darknessQueue[std::pair(Vec3<float>(chunkPos.x, a.first, chunkPos.z), Vec3<float>(a.second.x, a.second.y, a.second.z))] = 0;
             darkResult[std::pair(Vec3<float>(chunkPos.x, a.first, chunkPos.z), Vec3<float>(a.second.x, a.second.y, a.second.z))] = 0;
         }
+        if (a.first == chunkPos.y + 1.0f && a.second.y == 0.0f) {
+            darknessQueue[std::pair(Vec3<float>(chunkPos.x, a.first, chunkPos.z), Vec3<float>(a.second.x, a.second.y, a.second.z))] = 0;
+            darkResult[std::pair(Vec3<float>(chunkPos.x, a.first, chunkPos.z), Vec3<float>(a.second.x, a.second.y, a.second.z))] = 0;
+        }
     }
 
     // ch++;
