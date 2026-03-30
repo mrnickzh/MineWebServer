@@ -17,11 +17,13 @@ void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>
     ServerPacketHelper::registerPacket(4, []() { return new PlayerAuthInputServer(); });
     ServerPacketHelper::registerPacket(5, []() { return new LightMapServer(); });
 
+    this->serverPhysicsEngine = std::make_unique<ServerPhysicsEngine>(&this->chunks);
+
     if (!std::filesystem::exists("regions")) {
         std::filesystem::create_directory("regions");
     }
 
-    std::thread lightupdater([&]() {
+    std::thread lightthread([&]() {
         while (true) {
             // std::cout << lightUpdateQueue.size() << " queue" << std::endl;
             std::set<Vec3<float>> affectedChunks;
@@ -53,7 +55,7 @@ void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>
                     }
                     for (auto c : L_affectedChunks) {
                         affectedChunks.insert(c);
-                        Server::getInstance().chunks[c]->checkLights(c, Block(0, Vec3<float>(0.0f, 0.0f, 0.0f)));
+                        Server::getInstance().chunks[c]->checkLights(c, Block(0, Vec3<float>(0.0f, 0.0f, 0.0f), Vec3<float>(0.0f, 0.0f, 0.0f), false, Vec3<float>(0.5f, 0.5f, 0.5f)));
                     }
                     for (auto c : A_affectedChunks) {
                         affectedChunks.insert(c);
@@ -85,10 +87,48 @@ void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
     });
-    lightupdater.detach();
+    lightthread.detach();
+
+    std::thread physicsthread([&]() {
+        int tps = 60;
+        int mps = 1000 / tps;
+        long long ltt = duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+        long long lst = duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+        while (true) {
+            long long now = duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+            long long elapsed = now - ltt;
+
+            if (elapsed >= mps) {
+                int ticksToRun = (int) (elapsed / mps);
+                ltt += ticksToRun * mps;
+
+                for (int i = 0; i < ticksToRun; i++) {
+                    Server::getInstance().serverPhysicsEngine->step();
+                }
+            }
+
+            if (now >= lst + 5000) {
+                std::cout << "Physics sync..." << std::endl;
+                for (auto c : Server::getInstance().entities) {
+                    PlayerAuthInputServer movepacket;
+                    movepacket.uuid = c.second->uuid;
+                    movepacket.position = c.second->position;
+                    movepacket.rotation = c.second->rotation;
+                    movepacket.velocity = c.second->velocity;
+                    for (auto& s : Server::getInstance().clients) {
+                        Server::getInstance().sendPacket(s.first, &movepacket);
+                    }
+                }
+                lst = now;
+            }
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+         }
+    });
+    physicsthread.detach();
 
 #ifndef BUILD_TYPE_DEDICATED
-    std::thread packetprocessor([&]() {
+    std::thread packetthread([&]() {
         while (true) {
             // std::cout << serverPacketQueue.size() << " queue" << std::endl;
             while (!serverPacketQueue.empty()) {
@@ -100,11 +140,11 @@ void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
     });
-    packetprocessor.detach();
+    packetthread.detach();
 #endif
 
 #ifdef BUILD_TYPE_DEDICATED
-    std::thread watcher([&]() {
+    std::thread regionthread([&]() {
         int ch = 0;
         while (true) {
             std::set<Vec3<float>> activeRegions;
@@ -112,7 +152,7 @@ void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>
                 for (int x = -1; x <= 1; x++) {
                     for (int y = -1; y <= 1; y++) {
                         for (int z = -1; z <= 1; z++) {
-                            activeRegions.insert(Vec3<float>(floor(floor(entity.position.x / 8.0f) / 8.0f) + (float)x, floor(floor(entity.position.y / 8.0f) / 8.0f) + (float)y, floor(floor(entity.position.z / 8.0f) / 8.0f) + (float)z));
+                            activeRegions.insert(Vec3<float>(floor(floor(entity.second->position.x / 8.0f) / 8.0f) + (float)x, floor(floor(entity.second->position.y / 8.0f) / 8.0f) + (float)y, floor(floor(entity.second->position.z / 8.0f) / 8.0f) + (float)z));
                         }
                     }
                 }
@@ -150,7 +190,7 @@ void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>
             std::this_thread::sleep_for(std::chrono::seconds(15));
         }
     });
-    watcher.detach();
+    regionthread.detach();
 #endif
 }
 

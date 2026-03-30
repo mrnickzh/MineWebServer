@@ -26,11 +26,11 @@ public:
         // std::cout << chunkpos.x << " " << chunkpos.y << " " << chunkpos.z << std::endl;
         // std::cout << blockpos.x << " " << blockpos.y << " " << blockpos.z << std::endl;
 
-        Block prevblock = Block(0, Vec3<float>(blockpos.x, blockpos.y, blockpos.z));
+        Block prevblock = Block(0, Vec3<float>(blockpos.x, blockpos.y, blockpos.z), Vec3<float>(0.0f, 0.0f, 0.0f), false, Vec3<float>(0.5f, 0.5f, 0.5f));
         {
             std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
             prevblock = *(Server::getInstance().chunks[chunkpos]->getBlock(blockpos));
-            std::shared_ptr<Block> block = std::make_shared<Block>(id, blockpos);
+            std::shared_ptr<Block> block = std::make_shared<Block>(id, blockpos, Vec3<float>(0.0f, 0.0f, 0.0f), (id == 0 ? false : true), Vec3<float>(0.5f, 0.5f, 0.5f));
             Server::getInstance().chunks[chunkpos]->addBlock(blockpos, block);
         }
         // A_affectedChunks = Server::getInstance().chunks[chunkpos]->checkHeight(chunkpos, blockpos);

@@ -4,6 +4,8 @@
 #include <cmath>
 #include <cstdint>
 
+// i dont have a single fucking clue what happens here
+
 class PerlinNoise {
 private:
     uint64_t seed;

@@ -8,6 +8,7 @@
 #include <random>
 #include <thread>
 
+#include "Physics/ServerPhysicsEngine.hpp"
 #include "Protocol/ClientSession.hpp"
 #include "Protocol/ServerPacket.hpp"
 #include "Utils/HeightMap.hpp"
@@ -54,9 +55,12 @@ public:
     std::map<ClientSession*, void*> clients;
 
     std::map<Vec3<float>, std::shared_ptr<ServerChunkMap>> chunks;
-    std::set<ServerEntity> entities;
+    std::map<std::string, std::shared_ptr<ServerEntity>> entities;
 
     std::mutex chunksMutex;
+
+    std::unique_ptr<ServerPhysicsEngine> serverPhysicsEngine;
+
     std::mutex lightUpdateQueueMutex;
     std::mutex lightUpdateFallbackQueueMutex;
     std::deque<std::pair<Vec3<float>, Block>> lightUpdateQueue;

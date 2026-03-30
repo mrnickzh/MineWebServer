@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <cstring>
 #include <cstdint>
+#include <cassert>
 
 class ByteBuf {
 private:
@@ -15,7 +16,8 @@ public:
 
     void writeInt(int32_t value) {
         if (position + sizeof(int32_t) > buffer.size()) {
-            throw std::out_of_range("Buffer overflow");
+            assert(0 == 1 && "Buffer overflow");
+            // throw std::out_of_range("Buffer overflow");
         }
         std::memcpy(buffer.data() + position, &value, sizeof(int32_t));
         position += sizeof(int32_t);
@@ -23,7 +25,8 @@ public:
 
     int32_t readInt() {
         if (position + sizeof(int32_t) > buffer.size()) {
-            throw std::out_of_range("Buffer underflow");
+            assert(0 == 1 && "Buffer underflow");
+            // throw std::out_of_range("Buffer underflow");
         }
         int32_t value;
         std::memcpy(&value, buffer.data() + position, sizeof(int32_t));
@@ -33,7 +36,8 @@ public:
 
     void writeFloat(float value) {
         if (position + sizeof(float) > buffer.size()) {
-            throw std::out_of_range("Buffer overflow");
+            assert(0 == 1 && "Buffer overflow");
+            // throw std::out_of_range("Buffer overflow");
         }
         std::memcpy(buffer.data() + position, &value, sizeof(float));
         position += sizeof(float);
@@ -41,7 +45,8 @@ public:
 
     float readFloat() {
         if (position + sizeof(float) > buffer.size()) {
-            throw std::out_of_range("Buffer underflow");
+            assert(0 == 1 && "Buffer underflow");
+            // throw std::out_of_range("Buffer underflow");
         }
         float value;
         std::memcpy(&value, buffer.data() + position, sizeof(float));
@@ -52,7 +57,8 @@ public:
     void writeString(const std::string& value) {
         size_t length = value.size();
         if (position + sizeof(int32_t) + length > buffer.size()) {
-            throw std::out_of_range("Buffer overflow");
+            assert(0 == 1 && "Buffer overflow");
+            // throw std::out_of_range("Buffer overflow");
         }
         writeInt(static_cast<int32_t>(length));
         std::memcpy(buffer.data() + position, value.data(), length);
@@ -62,7 +68,8 @@ public:
     std::string readString() {
         int32_t length = readInt();
         if (position + length > buffer.size()) {
-            throw std::out_of_range("Buffer underflow");
+            assert(0 == 1 && "Buffer underflow");
+            // throw std::out_of_range("Buffer underflow");
         }
         std::string value(reinterpret_cast<char*>(buffer.data() + position), length);
         position += length;

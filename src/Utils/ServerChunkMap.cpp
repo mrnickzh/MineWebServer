@@ -53,7 +53,7 @@ void ServerChunkMap::generateOres(Vec3<float> chunkPos,  int oreBlockId, int clu
             auto it = getBlock(pos);
 
             if(it->id != 1) continue;
-            addBlock(pos, std::make_shared<Block>(oreBlockId, pos));
+            addBlock(pos, std::make_shared<Block>(oreBlockId, pos, Vec3<float>(0.0f, 0.0f, 0.0f), true, Vec3<float>(0.5f, 0.5f, 0.5f)));
 
             x += ((int)(rng() % 3)) - 1;
             y += ((int)(rng() % 3)) - 1;
@@ -68,7 +68,7 @@ void ServerChunkMap::generate(Vec3<float> chunkPos) {
             for (int y = 0; y < 8; y++) {
                 for (int z = 0; z < 8; z++) {
                     Vec3<float> blockPos = Vec3((float) x, (float) y, (float) z);
-                    std::shared_ptr<Block> block = std::make_shared<Block>(0, blockPos);
+                    std::shared_ptr<Block> block = std::make_shared<Block>(0, blockPos, Vec3<float>(0.0f, 0.0f, 0.0f), false, Vec3<float>(0.5f, 0.5f, 0.5f));
                     addBlock(blockPos, block);
                 }
             }
@@ -81,7 +81,7 @@ void ServerChunkMap::generate(Vec3<float> chunkPos) {
             for (int y = 0; y < 8; y++) {
                 for (int z = 0; z < 8; z++) {
                     Vec3<float> blockPos = Vec3((float) x, (float) y, (float) z);
-                    std::shared_ptr<Block> block = std::make_shared<Block>(1, blockPos);
+                    std::shared_ptr<Block> block = std::make_shared<Block>(1, blockPos, Vec3<float>(0.0f, 0.0f, 0.0f), true, Vec3<float>(0.5f, 0.5f, 0.5f));
                     addBlock(blockPos, block);
                 }
             }
@@ -109,7 +109,7 @@ void ServerChunkMap::generate(Vec3<float> chunkPos) {
                         // if (chunkPos.x == 0.0f && chunkPos.z == 0.0f && x == 0 && z == 0) { std::cout << ambientPos.y << ", " << y << std::endl; }
                         HeightMap::getInstance().addMap(Vec2<float>(chunkPos.x, chunkPos.z), height, ambientPos);
                     }
-                    std::shared_ptr<Block> block = std::make_shared<Block>(id, blockPos);
+                    std::shared_ptr<Block> block = std::make_shared<Block>(id, blockPos, Vec3<float>(0.0f, 0.0f, 0.0f), (id == 0 ? false : true), Vec3<float>(0.5f, 0.5f, 0.5f));
                     addBlock(blockPos, block);
                 }
             }
@@ -128,7 +128,7 @@ void ServerChunkMap::generate(Vec3<float> chunkPos) {
                 float k = (Server::getInstance().seedMap->perlinNoiseCaves->generate3D((float)wx, (float)wy, (float)wz, 0.02f) + 1.0f) / 2.0f;
 
                 if (k > 0.6f) {
-                    addBlock(blockPos, std::make_shared<Block>(0, blockPos));
+                    addBlock(blockPos, std::make_shared<Block>(0, blockPos, Vec3<float>(0.0f, 0.0f, 0.0f), false, Vec3<float>(0.5f, 0.5f, 0.5f)));
                     checkHeight(chunkPos, blockPos);
                 }
             }

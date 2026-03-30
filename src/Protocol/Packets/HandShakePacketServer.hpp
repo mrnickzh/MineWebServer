@@ -23,8 +23,9 @@ public:
         session->username = name;
         session->uuid = uuid::v4::UUID::New().String();
 
-        ServerEntity entity = ServerEntity(session->uuid, Vec3<float>(0.0f, 1.0f, 0.0f), Vec3<float>(0.0f, 0.0f, 0.0f), Vec3<float>(0.0f, 0.0f, 0.0f));
-        Server::getInstance().entities.insert(entity);
+        std::shared_ptr<ServerEntity> entity = std::make_shared<ServerEntity>(session->uuid, Vec3<float>(0.0f, 1.0f, 0.0f), Vec3<float>(0.0f, 0.0f, 0.0f), Vec3<float>(0.0f, 0.0f, 0.0f), true, Vec3<float>(0.25f, 0.75f, 0.25f));
+        Server::getInstance().entities[session->uuid] = entity;
+        Server::getInstance().serverPhysicsEngine->registerObject(entity, 1.0f);
 
         EntityActionServer packet;
         packet.uuid = session->uuid;
@@ -40,9 +41,9 @@ public:
 
                 PlayerAuthInputServer inputpacket;
                 inputpacket.uuid = s.first->uuid;
-                inputpacket.position = entity.position;
-                inputpacket.rotation = entity.rotation;
-                inputpacket.velocity = entity.velocity;
+                inputpacket.position = entity->position;
+                inputpacket.rotation = entity->rotation;
+                inputpacket.velocity = entity->velocity;
                 Server::getInstance().sendPacket(session, &inputpacket);
             }
         }

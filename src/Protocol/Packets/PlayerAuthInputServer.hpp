@@ -44,8 +44,9 @@ public:
     }
 
     void process(ClientSession* session) override {
-        Server::getInstance().entities.erase(ServerEntity(session->uuid, position, rotation, velocity));
-        Server::getInstance().entities.insert(ServerEntity(session->uuid, position, rotation, velocity));
+        Server::getInstance().entities[session->uuid]->position = position;
+        Server::getInstance().entities[session->uuid]->rotation = rotation;
+        Server::getInstance().entities[session->uuid]->velocity = velocity;
 
         // std::cout << uuid << std::endl;
 

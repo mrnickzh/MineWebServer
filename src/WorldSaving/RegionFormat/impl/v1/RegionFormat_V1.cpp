@@ -25,7 +25,7 @@ void RegionFormat_V1::load(ByteBuf &buffer, Vec3<float> pos) {
             int id = buffer.readInt();
 
             Vec3<float> blockPos = Vec3(bx, by, bz);
-            std::shared_ptr<Block> block = std::make_shared<Block>(id, blockPos);
+            std::shared_ptr<Block> block = std::make_shared<Block>(id, blockPos, Vec3<float>(0.0f, 0.0f, 0.0f), (id == 0 ? false : true), Vec3<float>(0.5f, 0.5f, 0.5f));
 
             for (int l = 0; l < 6; l++) {
                 block->lightLevels[l].x = buffer.readInt();

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <vector>
 #include <stdexcept>
 #include <iostream>
@@ -18,7 +19,8 @@ public:
 
         int err = deflateInit(&zs, compressionlevel);
         if (err != Z_OK)
-            throw(std::runtime_error("deflateInit error " + std::to_string(err)));
+            assert(0 == 1 && std::string("deflateInit error " + std::to_string(err)).c_str());
+            // throw(std::runtime_error("deflateInit error " + std::to_string(err)));
 
         zs.next_in = (Bytef*)inbuf.data();
         zs.avail_in = inbuf.size();           // set the z_stream's input
@@ -44,7 +46,8 @@ public:
         if (ret != Z_STREAM_END) {          // an error occurred that was not EOF
             std::ostringstream oss;
             oss << "Exception during zlib compression: (" << ret << ") " << zs.msg;
-            throw std::runtime_error(oss.str());
+            assert(0 == 1 && oss.str().c_str());
+            // throw std::runtime_error(oss.str());
         }
 
         return outbuf;
@@ -57,7 +60,8 @@ public:
 
         int err = inflateInit(&zs);
         if (err != Z_OK)
-            throw(std::runtime_error("inflateInit error " + std::to_string(err)));
+            assert(0 == 1 && std::string("inflateInit error " + std::to_string(err)).c_str());
+            // throw(std::runtime_error("inflateInit error " + std::to_string(err)));
 
         std::cout << inbuf.size() << " size" << std::endl;
 
@@ -86,7 +90,8 @@ public:
         if (ret != Z_STREAM_END) {          // an error occurred that was not EOF
             std::ostringstream oss;
             oss << "Exception during zlib decompression: (" << ret << ") " << zs.msg;
-            throw std::runtime_error(oss.str());
+            assert(0 == 1 && oss.str().c_str());
+            // throw std::runtime_error(oss.str());
         }
 
         return outbuf;
