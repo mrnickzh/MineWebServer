@@ -271,7 +271,10 @@ public:
                 float bx = hmbb.readFloat();
                 float by = hmbb.readFloat();
                 float bz = hmbb.readFloat();
-                HeightMap::getInstance().addMap(Vec2<float>(hx, hy), cy, Vec3<float>(bx, by, bz));
+                // printf("hm x: %f, z: %f, h: %f, bx: %f, by: %f, bz: %f\n", hx, hy, cy, bx, by, bz);
+                Vec2<float> hpos = Vec2<float>(hx, hy);
+                Vec3<float> bpos = Vec3<float>(bx, by, bz);
+                HeightMap::getInstance().addMap(hpos, cy, bpos);
             }
         }
 
