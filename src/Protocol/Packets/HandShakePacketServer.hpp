@@ -23,7 +23,7 @@ public:
         session->username = name;
         session->uuid = uuid::v4::UUID::New().String();
 
-        std::shared_ptr<ServerEntity> entity = std::make_shared<ServerEntity>(session->uuid, Vec3<float>(0.0f, 1.0f, 0.0f), Vec3<float>(0.0f, 0.0f, 0.0f), Vec3<float>(0.0f, 0.0f, 0.0f), true, Vec3<float>(0.25f, 0.75f, 0.25f));
+        std::shared_ptr<ServerEntity> entity = std::make_shared<ServerEntity>(session->uuid, Vec3<float>(0.0f, 1.0f, 0.0f), Vec3<float>(0.0f, 0.0f, 0.0f), true, Vec3<float>(0.25f, 0.75f, 0.25f));
         Server::getInstance().entities[session->uuid] = entity;
         Server::getInstance().serverPhysicsEngine->registerObject(entity, 1.0f);
 
@@ -43,7 +43,7 @@ public:
                 inputpacket.uuid = s.first->uuid;
                 inputpacket.position = entity->position;
                 inputpacket.rotation = entity->rotation;
-                inputpacket.velocity = entity->velocity;
+                inputpacket.velocity = Vec3<float>(0.0f, 0.0f, 0.0f);
                 Server::getInstance().sendPacket(session, &inputpacket);
             }
         }

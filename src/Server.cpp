@@ -5,6 +5,7 @@
 
 #include "Protocol/ClientSession.hpp"
 #include "Protocol/ServerPacketHelper.hpp"
+#include "Protocol/Packets/ChatMessageServer.hpp"
 #include "Protocol/Packets/GenerateChunkServer.hpp"
 #include "Protocol/Packets/HandShakePacketServer.hpp"
 
@@ -16,6 +17,7 @@ void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>
     ServerPacketHelper::registerPacket(3, []() { return new EntityActionServer(); });
     ServerPacketHelper::registerPacket(4, []() { return new PlayerAuthInputServer(); });
     ServerPacketHelper::registerPacket(5, []() { return new LightMapServer(); });
+    ServerPacketHelper::registerPacket(6, []() { return new ChatMessageServer(); });
 
     this->serverPhysicsEngine = std::make_unique<ServerPhysicsEngine>(&this->chunks);
 
@@ -109,12 +111,12 @@ void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>
 
             if (now >= lst + 5000) {
                 std::cout << "Physics sync..." << std::endl;
-                for (auto c : Server::getInstance().entities) {
+                for (auto& c : Server::getInstance().serverPhysicsEngine->registeredObjects) {
                     PlayerAuthInputServer movepacket;
-                    movepacket.uuid = c.second->uuid;
-                    movepacket.position = c.second->position;
-                    movepacket.rotation = c.second->rotation;
-                    movepacket.velocity = c.second->velocity;
+                    movepacket.uuid = c->object->uuid;
+                    movepacket.position = c->object->position;
+                    movepacket.rotation = c->object->rotation;
+                    movepacket.velocity = c->velocity;
                     for (auto& s : Server::getInstance().clients) {
                         Server::getInstance().sendPacket(s.first, &movepacket);
                     }

@@ -44,9 +44,10 @@ public:
     }
 
     void process(ClientSession* session) override {
-        Server::getInstance().entities[session->uuid]->position = position;
-        Server::getInstance().entities[session->uuid]->rotation = rotation;
-        Server::getInstance().entities[session->uuid]->velocity = velocity;
+        std::shared_ptr<ServerEntity> e = Server::getInstance().entities[session->uuid];
+        e->position = position;
+        e->rotation = rotation;
+        Server::getInstance().serverPhysicsEngine->setVelocity(e, velocity);
 
         // std::cout << uuid << std::endl;
 
