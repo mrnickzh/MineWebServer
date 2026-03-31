@@ -6,6 +6,7 @@
 #include "EditChunkServer.hpp"
 #include "EntityActionServer.hpp"
 #include "PlayerAuthInputServer.hpp"
+#include "NetworkSettingsPacket.hpp"
 #include "Server.hpp"
 #include "Utils/uuid.hpp"
 
@@ -22,6 +23,13 @@ public:
     void process(ClientSession* session) override {
         session->username = name;
         session->uuid = uuid::v4::UUID::New().String();
+
+        printf("wqeewqe\n");
+
+        NetworkSettingsPacketServer networkSettings;
+        networkSettings.settings = session->networkSettings;
+        Server::getInstance().sendPacket(session, &networkSettings);
+        session->connectionState = ConnectionState::PLAY;
 
         std::shared_ptr<ServerEntity> entity = std::make_shared<ServerEntity>(session->uuid, Vec3<float>(0.0f, 1.0f, 0.0f), Vec3<float>(0.0f, 0.0f, 0.0f), true, Vec3<float>(0.25f, 0.75f, 0.25f));
         Server::getInstance().entities[session->uuid] = entity;

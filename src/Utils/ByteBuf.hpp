@@ -14,6 +14,20 @@ private:
 public:
     ByteBuf(size_t capacity) : buffer(capacity) {}
 
+    void writeByte(uint8_t value) {
+        if (position + sizeof(uint8_t) > buffer.size()) {
+            assert(0 == 1 && "Buffer overflow");
+        }
+        buffer[position++] = value;
+    }
+
+    uint8_t readByte() {
+        if (position + sizeof(uint8_t) > buffer.size()) {
+            assert(0 == 1 && "Buffer underflow");
+        }
+        return buffer[position++];
+    }
+
     void writeInt(int32_t value) {
         if (position + sizeof(int32_t) > buffer.size()) {
             assert(0 == 1 && "Buffer overflow");

@@ -18,6 +18,7 @@ void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>
     ServerPacketHelper::registerPacket(4, []() { return new PlayerAuthInputServer(); });
     ServerPacketHelper::registerPacket(5, []() { return new LightMapServer(); });
     ServerPacketHelper::registerPacket(6, []() { return new ChatMessageServer(); });
+    ServerPacketHelper::registerPacket(7, []() { return new NetworkSettingsPacketServer(); });
 
     this->serverPhysicsEngine = std::make_unique<ServerPhysicsEngine>(&this->chunks);
 
@@ -217,6 +218,21 @@ void Server::processPacket(ClientSession* session, std::vector<uint8_t> data) {
 
 void Server::sendPacket(ClientSession* session, ServerPacket* packet) {
     std::vector<uint8_t> data = ServerPacketHelper::encodePacket(packet);
+
+    if (session->connectionState != HANDSHAKE_EXCHANGE) {
+        auto compressionType  = session->networkSettings.compressionType;
+
+        if (data.size() < session->networkSettings.compressionThreshold || compressionType == CompressionType::DUMMY) {
+            data.insert(data.begin(), 0xFF);
+        } else {
+            switch (compressionType) {
+                case CompressionType::ZLIB:
+                    data = ZLibUtils::compress_data(data);
+                    break;
+            }
+        }
+    }
+
     callback(session, data);
 }
 

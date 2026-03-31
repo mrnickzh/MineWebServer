@@ -63,8 +63,6 @@ public:
             assert(0 == 1 && std::string("inflateInit error " + std::to_string(err)).c_str());
             // throw(std::runtime_error("inflateInit error " + std::to_string(err)));
 
-        std::cout << inbuf.size() << " size" << std::endl;
-
         zs.next_in = (Bytef*)inbuf.data();
         zs.avail_in = inbuf.size();
 

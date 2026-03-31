@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "ServerPacket.hpp"
+#include "Utils/ZLibUtils.hpp"
 
 namespace ServerPacketHelper {
 
@@ -41,7 +42,19 @@ namespace ServerPacketHelper {
         return buffer.toByteArray();
     }
 
-    inline void decodePacket(ClientSession* session, const std::vector<uint8_t> data) {
+    inline void decodePacket(ClientSession* session, std::vector<uint8_t> data) {
+        if (session->connectionState != HANDSHAKE_EXCHANGE) {
+            if (data[0] == 0xFF) {
+                data.erase(data.begin());
+            } else {
+                switch (session->networkSettings.compressionType) {
+                    case CompressionType::ZLIB:
+                        data = ZLibUtils::decompress_data(data);
+                        break;
+                }
+            }
+        }
+
         ByteBuf buffer(65536);
 
         buffer.fromByteArray(data);
