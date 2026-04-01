@@ -11,6 +11,7 @@ public:
     std::shared_ptr<ServerEntity> object;
     Vec3<float> velocity;
     float mass;
+    bool frozen = false;
 
     ServerPhysicsObject(std::shared_ptr<ServerEntity>& obj, float m);
     Vec3<float> getPosition();

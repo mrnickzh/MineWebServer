@@ -7,7 +7,7 @@ struct ServerAABB {
     Vec3<float> BB;
 };
 
-class GetAABB {
+class ServerGetAABB {
 public:
     static ServerAABB CP2AABB(Vec3<float> collider, Vec3<float> position) {
         Vec3<float> aa = position - collider;

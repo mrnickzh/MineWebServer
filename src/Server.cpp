@@ -112,14 +112,16 @@ void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>
 
             if (now >= lst + 5000) {
                 std::cout << "Physics sync..." << std::endl;
-                for (auto& c : Server::getInstance().serverPhysicsEngine->registeredObjects) {
-                    PlayerAuthInputServer movepacket;
-                    movepacket.uuid = c->object->uuid;
-                    movepacket.position = c->object->position;
-                    movepacket.rotation = c->object->rotation;
-                    movepacket.velocity = c->velocity;
-                    for (auto& s : Server::getInstance().clients) {
-                        Server::getInstance().sendPacket(s.first, &movepacket);
+                for (auto& chunk : Server::getInstance().serverPhysicsEngine->registeredObjects) {
+                    for (auto& c : chunk.second) {
+                        PlayerAuthInputServer movepacket;
+                        movepacket.uuid = c->object->uuid;
+                        movepacket.position = c->object->position;
+                        movepacket.rotation = c->object->rotation;
+                        movepacket.velocity = c->velocity;
+                        for (auto& s : Server::getInstance().clients) {
+                            Server::getInstance().sendPacket(s.first, &movepacket);
+                        }
                     }
                 }
                 lst = now;
@@ -227,7 +229,7 @@ void Server::sendPacket(ClientSession* session, ServerPacket* packet) {
         } else {
             switch (compressionType) {
                 case CompressionType::ZLIB:
-                    data = ZLibUtils::compress_data(data);
+                    data = ZLibUtils::compress_data(data, 5);
                     break;
             }
         }

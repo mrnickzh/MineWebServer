@@ -60,6 +60,7 @@ public:
     std::mutex chunksMutex;
 
     std::unique_ptr<ServerPhysicsEngine> serverPhysicsEngine;
+    std::mutex serverEntityMutex;
 
     std::mutex lightUpdateQueueMutex;
     std::mutex lightUpdateFallbackQueueMutex;

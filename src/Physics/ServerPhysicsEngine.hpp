@@ -19,7 +19,7 @@ struct ServerRaycastResult {
 
 class ServerPhysicsEngine {
 public:
-    std::vector<std::shared_ptr<ServerPhysicsObject>> registeredObjects;
+    std::map<Vec3<float>, std::vector<std::shared_ptr<ServerPhysicsObject>>> registeredObjects;
     std::map<Vec3<float>, std::shared_ptr<ServerChunkMap>>* chunkmap;
 
     ServerPhysicsEngine(std::map<Vec3<float>, std::shared_ptr<ServerChunkMap>>* worldmap);
@@ -36,7 +36,11 @@ public:
     void step();
 
     bool isColliding(Vec3<float> object1, Vec3<float> object2, Vec3<float> collider1, Vec3<float> collider2);
+    void checkEntityChunk(std::shared_ptr<ServerPhysicsObject> entity, Vec3<float> prevpos);
+    std::vector<std::shared_ptr<ServerPhysicsObject>> possibleEntities(Vec3<float> position);
     bool possibleCollision(Vec3<float> position, Vec3<float> collider, const Block& object2);
+    bool possibleEntityCollision(Vec3<float> position, Vec3<float> collider, std::shared_ptr<ServerEntity> object2);
     std::vector<Block> possibleObstacles(Vec3<float> position);
-    void calculateVelocity(std::shared_ptr<ServerPhysicsObject>& obj);
+    void calculateVelocity(std::shared_ptr<ServerPhysicsObject> obj);
 };
+

@@ -24,20 +24,19 @@ public:
         session->username = name;
         session->uuid = uuid::v4::UUID::New().String();
 
-        printf("wqeewqe\n");
-
         NetworkSettingsPacketServer networkSettings;
         networkSettings.settings = session->networkSettings;
         Server::getInstance().sendPacket(session, &networkSettings);
         session->connectionState = ConnectionState::PLAY;
 
-        std::shared_ptr<ServerEntity> entity = std::make_shared<ServerEntity>(session->uuid, Vec3<float>(0.0f, 1.0f, 0.0f), Vec3<float>(0.0f, 0.0f, 0.0f), true, Vec3<float>(0.25f, 0.75f, 0.25f));
+        std::shared_ptr<ServerEntity> entity = std::make_shared<ServerEntity>(session->uuid, 49, Vec3<float>(0.0f, 1.0f, 0.0f), Vec3<float>(0.0f, 0.0f, 0.0f), true, Vec3<float>(0.25f, 0.75f, 0.25f));
         Server::getInstance().entities[session->uuid] = entity;
         Server::getInstance().serverPhysicsEngine->registerObject(entity, 1.0f);
 
         EntityActionServer packet;
         packet.uuid = session->uuid;
         packet.action = 0;
+        packet.id = 49;
         for (auto& s : Server::getInstance().clients) {
             if (s.first != session) {
                 Server::getInstance().sendPacket(s.first, &packet);
@@ -45,6 +44,7 @@ public:
                 EntityActionServer replicationpacket;
                 replicationpacket.uuid = s.first->uuid;
                 replicationpacket.action = 0;
+                replicationpacket.id = 49;
                 Server::getInstance().sendPacket(session, &replicationpacket);
 
                 PlayerAuthInputServer inputpacket;
@@ -54,6 +54,22 @@ public:
                 inputpacket.velocity = Vec3<float>(0.0f, 0.0f, 0.0f);
                 Server::getInstance().sendPacket(session, &inputpacket);
             }
+        }
+
+        for (auto& s : Server::getInstance().entities) {
+            if (s.second->id == 49) { continue; }
+            EntityActionServer replicationpacket;
+            replicationpacket.uuid = s.second->uuid;
+            replicationpacket.action = 0;
+            replicationpacket.id = 50;
+            Server::getInstance().sendPacket(session, &replicationpacket);
+
+            PlayerAuthInputServer inputpacket;
+            inputpacket.uuid = s.second->uuid;
+            inputpacket.position = entity->position;
+            inputpacket.rotation = entity->rotation;
+            inputpacket.velocity = Vec3<float>(0.0f, 0.0f, 0.0f);
+            Server::getInstance().sendPacket(session, &inputpacket);
         }
     }
 };

@@ -11,9 +11,21 @@ ServerPhysicsEngine::ServerPhysicsEngine(std::map<Vec3<float>, std::shared_ptr<S
     chunkmap = worldmap;
 }
 
+void ServerPhysicsEngine::checkEntityChunk(std::shared_ptr<ServerPhysicsObject> entity, Vec3<float> prevpos) {
+    Vec3<float> prevChunk = Vec3<float>(floor(prevpos.x / 8.0f), floor(prevpos.y / 8.0f), floor(prevpos.z / 8.0f));
+    Vec3<float> currentChunk = Vec3<float>(floor(entity->object->position.x / 8.0f), floor(entity->object->position.y / 8.0f), floor(entity->object->position.z / 8.0f));
+    if (prevChunk != currentChunk) {
+        registeredObjects[currentChunk].push_back(entity);
+        auto it = std::find_if(registeredObjects[prevChunk].begin(), registeredObjects[prevChunk].end(), [&entity](const std::shared_ptr<ServerPhysicsObject>& obj) {return obj == entity; });
+        if (it != registeredObjects[prevChunk].end()) {
+            registeredObjects[prevChunk].erase(it);
+        }
+    }
+}
+
 bool ServerPhysicsEngine::isColliding(Vec3<float> object1, Vec3<float> object2, Vec3<float> collider1, Vec3<float> collider2) {
-    ServerAABB obj1 = GetAABB::CP2AABB(collider1, object1);
-    ServerAABB obj2 = GetAABB::CP2AABB(collider2, object2);
+    ServerAABB obj1 = ServerGetAABB::CP2AABB(collider1, object1);
+    ServerAABB obj2 = ServerGetAABB::CP2AABB(collider2, object2);
 
     bool xcheck1 = obj1.AA.x < obj2.BB.x;
     bool x1check1 = obj1.BB.x > obj2.AA.x;
@@ -35,6 +47,28 @@ bool ServerPhysicsEngine::isColliding(Vec3<float> object1, Vec3<float> object2, 
 bool ServerPhysicsEngine::possibleCollision(Vec3<float> position, Vec3<float> collider, const Block& object2) {
     if (!object2.cancollide) { return false; }
     return isColliding(position, object2.position, collider, object2.collider);
+}
+
+bool ServerPhysicsEngine::possibleEntityCollision(Vec3<float> position, Vec3<float> collider, std::shared_ptr<ServerEntity> object2) {
+    if (!object2->cancollide) { return false; }
+    return isColliding(position, object2->position, collider, object2->collider);
+}
+
+std::vector<std::shared_ptr<ServerPhysicsObject>> ServerPhysicsEngine::possibleEntities(Vec3<float> position) {
+    std::vector<std::shared_ptr<ServerPhysicsObject>> obstacles;
+    Vec3<float> currentChunk = Vec3<float>(floor(position.x / 8.0f), floor(position.y / 8.0f), floor(position.z / 8.0f));
+    for (int i = -1; i <= 1; i++) {
+        for (int j = -1; j <= 1; j++) {
+            for (int k = -1; k <= 1; k++) {
+                Vec3<float> resultChunk = Vec3<float>(currentChunk.x + (float)i, currentChunk.y + (float)j, currentChunk.z + (float)k);
+                if (!registeredObjects.count(resultChunk)) { continue; }
+                for (auto entity : registeredObjects[resultChunk]) {
+                    obstacles.push_back(entity);
+                }
+            }
+        }
+    }
+    return obstacles;
 }
 
 std::vector<Block> ServerPhysicsEngine::possibleObstacles(Vec3<float> position) {
@@ -76,9 +110,14 @@ std::vector<Block> ServerPhysicsEngine::possibleObstacles(Vec3<float> position) 
     return obstacles;
 }
 
-void ServerPhysicsEngine::calculateVelocity(std::shared_ptr<ServerPhysicsObject>& obj) {
+void ServerPhysicsEngine::calculateVelocity(std::shared_ptr<ServerPhysicsObject> obj) {
     Vec3<float> vel = obj->velocity;
-    Vec3<float> pos = obj->getPosition();
+    Vec3<float> pos;
+    {
+        std::lock_guard<std::mutex> lock(Server::getInstance().serverEntityMutex);
+        pos = obj->getPosition();
+    }
+    Vec3<float> prevpos = pos;
 
     // std::cout << vel.x << " " << vel.y << " " << vel.z << " vel" << std::endl;
     // std::cout << pos.x << " " << pos.y << " " << pos.z << " pos" << std::endl;
@@ -94,6 +133,25 @@ void ServerPhysicsEngine::calculateVelocity(std::shared_ptr<ServerPhysicsObject>
 
     float inertiaAdjusted = 0.002f * obj->mass;
     float gravityAdjusted = 0.003f * obj->mass;
+
+    std::vector<std::shared_ptr<ServerPhysicsObject> > entities = possibleEntities(pos);
+
+    for (auto entity : entities) {
+        if (obj != entity) {
+            bool xCollision = false;
+            bool yCollision = false;
+            bool zCollision = false;
+
+            if (possibleEntityCollision(Vec3<float>(pos.x + vel.x, pos.y, pos.z), obj->getCollider(), entity->object)) { entity->velocity.x += vel.x / 2.0f; vel.x -= vel.x / 2.0f; xCollision = true; }
+            if (possibleEntityCollision(Vec3<float>(pos.x, pos.y, pos.z + vel.z), obj->getCollider(), entity->object)) { entity->velocity.y += vel.y / 2.0f; vel.y -= vel.y / 2.0f; yCollision = true; }
+            if (possibleEntityCollision(Vec3<float>(pos.x, pos.y + vel.y, pos.z), obj->getCollider(), entity->object)) { entity->velocity.z += vel.z / 2.0f; vel.z -= vel.z / 2.0f; zCollision = true;}
+
+            if (possibleEntityCollision(Vec3<float>(pos.x + vel.x, pos.y, pos.z + vel.z), obj->getCollider(), entity->object)) { if (!xCollision) { entity->velocity.x += vel.x / 2.0f; vel.x -= vel.x / 2.0f; } if (!zCollision) { entity->velocity.z += vel.z / 2.0f; vel.z -= vel.z / 2.0f; } }
+            if (possibleEntityCollision(Vec3<float>(pos.x + vel.x, pos.y + vel.y, pos.z), obj->getCollider(), entity->object)) { if (!xCollision) { entity->velocity.x += vel.x / 2.0f; vel.x -= vel.x / 2.0f; } if (!yCollision) { entity->velocity.y += vel.y / 2.0f; vel.y -= vel.y / 2.0f; } }
+            if (possibleEntityCollision(Vec3<float>(pos.x, pos.y + vel.y, pos.z + vel.z), obj->getCollider(), entity->object)) { if (!yCollision) { entity->velocity.y += vel.y / 2.0f; vel.y -= vel.y / 2.0f; } if (!zCollision) { entity->velocity.z += vel.z / 2.0f; vel.z -= vel.z / 2.0f; } }
+        
+        }
+    }
 
     // std::cout << vel.x << " " << (inertiaAdjusted * (std::abs(vel.x) / rate)) << " " << (std::abs(vel.x) / rate) << " x" << std::endl;
     // std::cout << vel.z << " " << (inertiaAdjusted * (std::abs(vel.z) / rate)) << " " << (std::abs(vel.z) / rate) << " z" << std::endl;
@@ -142,25 +200,32 @@ void ServerPhysicsEngine::calculateVelocity(std::shared_ptr<ServerPhysicsObject>
     // std::cout << XCollision << " " << YCollision << " " << ZCollision << std::endl;
     // std::cout << vel.x << " " << vel.y << " " << vel.z << std::endl;
 
-    obj->setPosition(pos);
+    {
+        std::lock_guard<std::mutex> lock(Server::getInstance().serverEntityMutex);
+        obj->setPosition(pos);
+    }
     // std::cout << obj->getPosition().x << " " << obj->getPosition().y << " " << obj->getPosition().z << std::endl;
     obj->velocity = vel;
+
+    checkEntityChunk(obj, prevpos);
 }
 
 void ServerPhysicsEngine::registerObject(std::shared_ptr<ServerEntity> object, float mass) {
-    std::shared_ptr<ServerPhysicsObject> physicsBlock = std::make_shared<ServerPhysicsObject>(object, mass);
-    registeredObjects.push_back(physicsBlock);
+    std::shared_ptr<ServerPhysicsObject> physicsObject = std::make_shared<ServerPhysicsObject>(object, mass);
+    Vec3<float> currentChunk = Vec3<float>(floor(object->position.x / 8.0f), floor(object->position.y / 8.0f), floor(object->position.z / 8.0f));
+    registeredObjects[currentChunk].push_back(physicsObject);
 }
 
 void ServerPhysicsEngine::unregisterObject(std::shared_ptr<ServerEntity> object) {
-
-    auto it = std::find_if(registeredObjects.begin(), registeredObjects.end(), [&object](const std::shared_ptr<ServerPhysicsObject>& obj) {return obj->object == object; });
-    if (it != registeredObjects.end()) { registeredObjects.erase(it); }
+    Vec3<float> currentChunk = Vec3<float>(floor(object->position.x / 8.0f), floor(object->position.y / 8.0f), floor(object->position.z / 8.0f));
+    auto it = std::find_if(registeredObjects[currentChunk].begin(), registeredObjects[currentChunk].end(), [&object](const std::shared_ptr<ServerPhysicsObject>& obj) {return obj->object == object; });
+    if (it != registeredObjects[currentChunk].end()) {  registeredObjects[currentChunk].erase(it); }
 }
 
 void ServerPhysicsEngine::addVelocityRotation(std::shared_ptr<ServerEntity> object, Vec3<float> velocity) {
-    auto it = std::find_if(registeredObjects.begin(), registeredObjects.end(), [&object](const std::shared_ptr<ServerPhysicsObject>& obj) {return obj->object == object; });
-    if (it != registeredObjects.end()) {
+    Vec3<float> currentChunk = Vec3<float>(floor(object->position.x / 8.0f), floor(object->position.y / 8.0f), floor(object->position.z / 8.0f));
+    auto it = std::find_if(registeredObjects[currentChunk].begin(), registeredObjects[currentChunk].end(), [&object](const std::shared_ptr<ServerPhysicsObject>& obj) {return obj->object == object; });
+    if (it != registeredObjects[currentChunk].end()) { 
         Vec3<float> rotation = Vec3<float>(object->rotation.x * (M_PI / 180.0), object->rotation.y * (M_PI / 180.0), object->rotation.z * (M_PI / 180.0));
         Vec3<float> real_velocity = Vec3<float>(0.0f, 0.0f, 0.0f);
         real_velocity.x = (velocity.x * std::cos(rotation.y) * std::cos(rotation.z)) + (velocity.z * -std::sin(rotation.y) * std::cos(rotation.z));
@@ -171,8 +236,9 @@ void ServerPhysicsEngine::addVelocityRotation(std::shared_ptr<ServerEntity> obje
 }
 
 void ServerPhysicsEngine::addVelocityClampedRotation(std::shared_ptr<ServerEntity> object, Vec3<float> velocity, Vec3<float> limit) {
-    auto it = std::find_if(registeredObjects.begin(), registeredObjects.end(), [&object](const std::shared_ptr<ServerPhysicsObject>& obj) {return obj->object == object; });
-    if (it != registeredObjects.end()) {
+    Vec3<float> currentChunk = Vec3<float>(floor(object->position.x / 8.0f), floor(object->position.y / 8.0f), floor(object->position.z / 8.0f));
+    auto it = std::find_if(registeredObjects[currentChunk].begin(), registeredObjects[currentChunk].end(), [&object](const std::shared_ptr<ServerPhysicsObject>& obj) {return obj->object == object; });
+    if (it != registeredObjects[currentChunk].end()) { 
         Vec3<float> rotation = Vec3<float>(object->rotation.x * (M_PI / 180.0), object->rotation.y * (M_PI / 180.0), object->rotation.z * (M_PI / 180.0));
 
         // std::cout << rotation.x << " " << rotation.y << " " << rotation.z << std::endl;
@@ -212,37 +278,42 @@ void ServerPhysicsEngine::addVelocityClampedRotation(std::shared_ptr<ServerEntit
     }}
 
 void ServerPhysicsEngine::setVelocity(std::shared_ptr<ServerEntity> object, Vec3<float> velocity) {
-    auto it = std::find_if(registeredObjects.begin(), registeredObjects.end(), [&object](const std::shared_ptr<ServerPhysicsObject>& obj) {return obj->object == object; });
-    if (it != registeredObjects.end()) { it->get()->velocity = velocity; }
+    Vec3<float> currentChunk = Vec3<float>(floor(object->position.x / 8.0f), floor(object->position.y / 8.0f), floor(object->position.z / 8.0f));
+    auto it = std::find_if(registeredObjects[currentChunk].begin(), registeredObjects[currentChunk].end(), [&object](const std::shared_ptr<ServerPhysicsObject>& obj) {return obj->object == object; });
+    if (it != registeredObjects[currentChunk].end()) {  it->get()->velocity = velocity; }
 }
 
 void ServerPhysicsEngine::addVelocity(std::shared_ptr<ServerEntity> object, Vec3<float> velocity) {
-    auto it = std::find_if(registeredObjects.begin(), registeredObjects.end(), [&object](const std::shared_ptr<ServerPhysicsObject>& obj) {return obj->object == object; });
-    if (it != registeredObjects.end()) { it->get()->velocity = Vec3<float>(it->get()->velocity.x + velocity.x, it->get()->velocity.y + velocity.y, it->get()->velocity.z + velocity.z); }
+    Vec3<float> currentChunk = Vec3<float>(floor(object->position.x / 8.0f), floor(object->position.y / 8.0f), floor(object->position.z / 8.0f));
+    auto it = std::find_if(registeredObjects[currentChunk].begin(), registeredObjects[currentChunk].end(), [&object](const std::shared_ptr<ServerPhysicsObject>& obj) {return obj->object == object; });
+    if (it != registeredObjects[currentChunk].end()) {  it->get()->velocity = Vec3<float>(it->get()->velocity.x + velocity.x, it->get()->velocity.y + velocity.y, it->get()->velocity.z + velocity.z); }
 }
 
 void ServerPhysicsEngine::addVelocityClamped(std::shared_ptr<ServerEntity> object, Vec3<float> velocity, Vec3<float> limit) {
-    auto it = std::find_if(registeredObjects.begin(), registeredObjects.end(), [&object](const std::shared_ptr<ServerPhysicsObject>& obj) {return obj->object == object; });
-    if (it != registeredObjects.end()) {
+    Vec3<float> currentChunk = Vec3<float>(floor(object->position.x / 8.0f), floor(object->position.y / 8.0f), floor(object->position.z / 8.0f));
+    auto it = std::find_if(registeredObjects[currentChunk].begin(), registeredObjects[currentChunk].end(), [&object](const std::shared_ptr<ServerPhysicsObject>& obj) {return obj->object == object; });
+    if (it != registeredObjects[currentChunk].end()) { 
         it->get()->velocity = Vec3<float>(std::clamp(it->get()->velocity.x + velocity.x, -limit.x, limit.x), std::clamp(it->get()->velocity.y + velocity.y, -limit.y, limit.y), std::clamp(it->get()->velocity.z + velocity.z, -limit.z, limit.z));
     }
 }
 
 Vec3<float> ServerPhysicsEngine::getVelocity(std::shared_ptr<ServerEntity> object) {
-    auto it = std::find_if(registeredObjects.begin(), registeredObjects.end(), [&object](const std::shared_ptr<ServerPhysicsObject>& obj) {return obj->object == object; });
-    if (it != registeredObjects.end()) { return it->get()->velocity; }
+    Vec3<float> currentChunk = Vec3<float>(floor(object->position.x / 8.0f), floor(object->position.y / 8.0f), floor(object->position.z / 8.0f));
+    auto it = std::find_if(registeredObjects[currentChunk].begin(), registeredObjects[currentChunk].end(), [&object](const std::shared_ptr<ServerPhysicsObject>& obj) {return obj->object == object; });
+    if (it != registeredObjects[currentChunk].end()) { return it->get()->velocity; }
     return Vec3<float>(0.0f, 0.0f, 0.0f);
 }
 
 bool ServerPhysicsEngine::isOnFoot(std::shared_ptr<ServerEntity> object) {
-    auto it = std::find_if(registeredObjects.begin(), registeredObjects.end(), [&object](const std::shared_ptr<ServerPhysicsObject>& obj) {return obj->object == object; });
-    if (it != registeredObjects.end()) {
+    Vec3<float> currentChunk = Vec3<float>(floor(object->position.x / 8.0f), floor(object->position.y / 8.0f), floor(object->position.z / 8.0f));
+    auto it = std::find_if(registeredObjects[currentChunk].begin(), registeredObjects[currentChunk].end(), [&object](const std::shared_ptr<ServerPhysicsObject>& obj) {return obj->object == object; });
+    if (it != registeredObjects[currentChunk].end()) { 
         std::vector<Block> obstacles = possibleObstacles(it->get()->getPosition());
         for (auto &obstacle : obstacles) {
             if (!obstacle.cancollide) { continue; }
 
-            ServerAABB obj1 = GetAABB::CP2AABB(object->collider, object->position);
-            ServerAABB obj2 = GetAABB::CP2AABB(obstacle.collider, obstacle.position);
+            ServerAABB obj1 = ServerGetAABB::CP2AABB(object->collider, object->position);
+            ServerAABB obj2 = ServerGetAABB::CP2AABB(obstacle.collider, obstacle.position);
 
             bool footcheckd = obj1.AA.y - 0.01f <= obj2.BB.y;
             bool footchecku = obj1.AA.y + 0.01f >= obj2.BB.y;
@@ -331,7 +402,13 @@ ServerRaycastResult ServerPhysicsEngine::raycast(float length, Vec3<float> start
 }
 
 void ServerPhysicsEngine::step() {
-    for (std::shared_ptr<ServerPhysicsObject> object : registeredObjects) {
-        calculateVelocity(object);
+    for (auto& objchunk : registeredObjects) {
+        for (auto object : objchunk.second) {
+            if (object == nullptr) { continue; }
+            if (object->frozen) { continue; }
+            Vec3<float> tmpPos = Vec3<float>(objchunk.first.x * 8.0f, objchunk.first.y * 8.0f, objchunk.first.z * 8.0f);
+            checkEntityChunk(object, tmpPos);
+            calculateVelocity(object);
+        }
     }
 }

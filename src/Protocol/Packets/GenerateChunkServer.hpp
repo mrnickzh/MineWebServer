@@ -29,6 +29,9 @@ class GenerateChunkServer : public ServerPacket {
 
         if (Server::getInstance().chunks.find(chunkpos) == Server::getInstance().chunks.end()) {
             chunkMap->generate(chunkpos);
+            if (!Server::getInstance().serverPhysicsEngine->registeredObjects.count(chunkpos)) {
+                Server::getInstance().serverPhysicsEngine->registeredObjects[chunkpos] = {};
+            }
             Server::getInstance().chunks[chunkpos] = chunkMap;
         }
 
