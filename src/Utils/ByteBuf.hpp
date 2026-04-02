@@ -17,6 +17,7 @@ public:
     void writeByte(uint8_t value) {
         if (position + sizeof(uint8_t) > buffer.size()) {
             assert(0 == 1 && "Buffer overflow");
+            // throw std::out_of_range("Buffer overflow");
         }
         buffer[position++] = value;
     }

@@ -56,7 +56,7 @@ public:
     void save(Vec3<float> pos) {
         Vec3<float> currentRegion = Vec3<float>(floor(pos.x / 8.0f), floor(pos.y / 8.0f), floor(pos.z / 8.0f));
 
-        ByteBuf bb(8388608);
+        ByteBuf bb(33554432);
         bb.writeInt(FORMAT_VERSION);
         bb.writeFloat(currentRegion.x);
         bb.writeFloat(currentRegion.y);
@@ -114,7 +114,7 @@ public:
         file.read(reinterpret_cast<char*>(buffer.data()), size);
         file.close();
 
-        ByteBuf bb(8388608);
+        ByteBuf bb(33554432);
         bb.fromByteArray(ZLibUtils::decompress_data(buffer));
 
         int format = bb.readInt();
@@ -132,7 +132,7 @@ public:
     }
 
     void exportAll() {
-        ByteBuf heightbuffer(16777216);
+        ByteBuf heightbuffer(33554432);
         auto heightMaps = HeightMap::getInstance().heightMaps;
         heightbuffer.writeInt((int)heightMaps.size());
         std::cout << (int)heightMaps.size() << " hm" << std::endl;
@@ -262,7 +262,7 @@ public:
         std::cout << heightlen << " hl" << std::endl;
 
         for (int i = 0; i < heightlen; i++) {
-            std::cout << i << std::endl;
+            // std::cout << i << std::endl;
             float hx = hmbb.readFloat();
             float hy = hmbb.readFloat();
             int hsize = hmbb.readInt();
@@ -301,7 +301,7 @@ public:
 
             pos += regionsize + sizeof(int32_t);
 
-            ByteBuf bb(8388608);
+            ByteBuf bb(33554432);
             bb.fromByteArray(ZLibUtils::decompress_data(regionbuffer));
 
             int format = bb.readInt();
