@@ -7,11 +7,11 @@ class ServerEntity {
 public:
     std::string uuid;
     int id;
-    Vec3<float> position;
-    Vec3<float> rotation;
+    glm::vec3 position;
+    glm::vec3 rotation;
     bool cancollide;
-    Vec3<float> collider;
-    ServerEntity(std::string uuid, int id, Vec3<float> position, Vec3<float> rotation, bool cancollide, Vec3<float> collider) : uuid(uuid), id(id), position(position), rotation(rotation), cancollide(cancollide), collider(collider) {}
+    glm::vec3 collider;
+    ServerEntity(std::string uuid, int id, glm::vec3 position, glm::vec3 rotation, bool cancollide, glm::vec3 collider) : uuid(uuid), id(id), position(position), rotation(rotation), cancollide(cancollide), collider(collider) {}
 
     bool operator==(const ServerEntity& other) const {
         return this->uuid == other.uuid;

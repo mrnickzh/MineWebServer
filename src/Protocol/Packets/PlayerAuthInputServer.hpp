@@ -8,23 +8,23 @@
 class PlayerAuthInputServer : public ServerPacket {
 public:
     std::string uuid;
-    Vec3<float> position;
-    Vec3<float> rotation;
-    Vec3<float> velocity;
+    glm::vec3 position;
+    glm::vec3 rotation;
+    glm::vec3 velocity;
 
     void receive(ByteBuf &buffer) override {
         float px = buffer.readFloat();
         float py = buffer.readFloat();
         float pz = buffer.readFloat();
-        position = Vec3<float>(px, py, pz);
+        position = glm::vec3(px, py, pz);
         float rx = buffer.readFloat();
         float ry = buffer.readFloat();
         float rz = buffer.readFloat();
-        rotation = Vec3<float>(rx, ry, rz);
+        rotation = glm::vec3(rx, ry, rz);
         float vx = buffer.readFloat();
         float vy = buffer.readFloat();
         float vz = buffer.readFloat();
-        velocity = Vec3<float>(vx, vy, vz);
+        velocity = glm::vec3(vx, vy, vz);
     }
 
     void send(ByteBuf &buffer) override {

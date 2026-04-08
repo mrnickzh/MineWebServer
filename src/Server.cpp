@@ -29,9 +29,9 @@ void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>
     std::thread lightthread([&]() {
         while (true) {
             // std::cout << lightUpdateQueue.size() << " queue" << std::endl;
-            std::set<Vec3<float>> affectedChunks;
-            std::set<Vec3<float>> updatedChunks;
-            std::deque<std::pair<Vec3<float>, Block>> tempLightQueue;
+            std::set<glm::vec3, vec3Comparator> affectedChunks;
+            std::set<glm::vec3, vec3Comparator> updatedChunks;
+            std::deque<std::pair<glm::vec3, Block>> tempLightQueue;
             for (auto p : Server::getInstance().lightUpdateFallbackQueue) {
                 std::lock_guard<std::mutex> guard(lightUpdateFallbackQueueMutex);
                 tempLightQueue.push_back(p);
@@ -44,10 +44,10 @@ void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>
             }
             while (!lightUpdateQueue.empty()) {
                 std::lock_guard<std::mutex> guard(lightUpdateQueueMutex);
-                std::pair<Vec3<float>, Block> lightChunk = lightUpdateQueue.front();
+                std::pair<glm::vec3, Block> lightChunk = lightUpdateQueue.front();
                 {
-                    std::set<Vec3<float>> L_affectedChunks;
-                    std::set<Vec3<float>> A_affectedChunks;
+                    std::set<glm::vec3, vec3Comparator> L_affectedChunks;
+                    std::set<glm::vec3, vec3Comparator> A_affectedChunks;
 
                     A_affectedChunks = Server::getInstance().chunks[lightChunk.first]->checkHeight(lightChunk.first, lightChunk.second.position);
                     Server::getInstance().chunks[lightChunk.first]->resetLights();
@@ -58,11 +58,11 @@ void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>
                     }
                     for (auto c : L_affectedChunks) {
                         affectedChunks.insert(c);
-                        Server::getInstance().chunks[c]->checkLights(c, Block(0, Vec3<float>(0.0f, 0.0f, 0.0f), Vec3<float>(0.0f, 0.0f, 0.0f), false, Vec3<float>(0.5f, 0.5f, 0.5f)));
+                        Server::getInstance().chunks[c]->checkLights(c, Block(0, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), false, glm::vec3(0.5f, 0.5f, 0.5f)));
                     }
                     for (auto c : A_affectedChunks) {
                         affectedChunks.insert(c);
-                        std::set<Vec3<float>> chunks = Server::getInstance().chunks[c]->checkAmbient(c);
+                        std::set<glm::vec3, vec3Comparator> chunks = Server::getInstance().chunks[c]->checkAmbient(c);
                         for (auto& a : chunks) {
                             affectedChunks.insert(a);
                         }
@@ -75,7 +75,7 @@ void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>
                 Server::getInstance().chunks[c]->resetAmbient();
             }
             for (auto c : affectedChunks) {
-                std::set<Vec3<float>> chunks = Server::getInstance().chunks[c]->checkAmbient(c);
+                std::set<glm::vec3, vec3Comparator> chunks = Server::getInstance().chunks[c]->checkAmbient(c);
                 for (auto& a : chunks) {
                     updatedChunks.insert(a);
                 }
@@ -152,12 +152,12 @@ void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>
     std::thread regionthread([&]() {
         int ch = 0;
         while (true) {
-            std::set<Vec3<float>> activeRegions;
+            std::set<glm::vec3, vec3Comparator> activeRegions;
             for (auto& entity : Server::getInstance().entities) {
                 for (int x = -1; x <= 1; x++) {
                     for (int y = -1; y <= 1; y++) {
                         for (int z = -1; z <= 1; z++) {
-                            activeRegions.insert(Vec3<float>(floor(floor(entity.second->position.x / 8.0f) / 8.0f) + (float)x, floor(floor(entity.second->position.y / 8.0f) / 8.0f) + (float)y, floor(floor(entity.second->position.z / 8.0f) / 8.0f) + (float)z));
+                            activeRegions.insert(glm::vec3(floor(floor(entity.second->position.x / 8.0f) / 8.0f) + (float)x, floor(floor(entity.second->position.y / 8.0f) / 8.0f) + (float)y, floor(floor(entity.second->position.z / 8.0f) / 8.0f) + (float)z));
                         }
                     }
                 }
@@ -168,13 +168,13 @@ void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>
             for (auto& region : loadedRegions) {
                 if (activeRegions.find(region) == activeRegions.end()) {
                     printf("Unloading %f %f %f\n", region.x, region.y, region.z);
-                    RegionRegistory::getInstance().save(Vec3<float>(region.x * 8.0f, region.y * 8.0f, region.z * 8.0f));
+                    RegionRegistory::getInstance().save(glm::vec3(region.x * 8.0f, region.y * 8.0f, region.z * 8.0f));
                     RegionRegistory::getInstance().loadedRegions.erase(region);
 
                     for (int x = 0; x < 8; x++) {
                         for (int y = 0; y < 8; y++) {
                             for (int z = 0; z < 8; z++) {
-                                Vec3<float> regionChunk = Vec3<float>((region.x * 8.0f) + (float)x, (region.y * 8.0f) + (float)y, (region.z * 8.0f) + (float)z);
+                                glm::vec3 regionChunk = glm::vec3((region.x * 8.0f) + (float)x, (region.y * 8.0f) + (float)y, (region.z * 8.0f) + (float)z);
                                 if (Server::getInstance().chunks.find(regionChunk) != Server::getInstance().chunks.end()) {
                                     std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
                                     Server::getInstance().chunks.erase(regionChunk);

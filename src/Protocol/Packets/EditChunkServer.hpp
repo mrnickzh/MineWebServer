@@ -1,36 +1,40 @@
 #pragma once
 
 #include "../ServerPacket.hpp"
-#include "../../Utils/Vec.hpp"
+
+#define GLM_FORCE_PURE
+#include "../../../lib/glm/glm.hpp"
+#include "../../../lib/glm/gtc/matrix_transform.hpp"
+#include "../../../lib/glm/gtc/type_ptr.hpp"
 
 class EditChunkServer : public ServerPacket {
 public:
     int id;
-    Vec3<float> chunkpos;
-    Vec3<float> blockpos;
-    std::set<Vec3<float>> L_affectedChunks;
-    std::set<Vec3<float>> A_affectedChunks;
+    glm::vec3 chunkpos;
+    glm::vec3 blockpos;
+    std::set<glm::vec3, vec3Comparator> L_affectedChunks;
+    std::set<glm::vec3, vec3Comparator> A_affectedChunks;
 
     void receive(ByteBuf &buffer) override {
         id = buffer.readInt();
         float cx = buffer.readFloat();
         float cy = buffer.readFloat();
         float cz = buffer.readFloat();
-        chunkpos = Vec3<float>(cx, cy, cz);
+        chunkpos = glm::vec3(cx, cy, cz);
         float bx = buffer.readFloat();
         float by = buffer.readFloat();
         float bz = buffer.readFloat();
-        blockpos = Vec3<float>(bx, by, bz);
+        blockpos = glm::vec3(bx, by, bz);
 
         // std::cout << id << std::endl;
         // std::cout << chunkpos.x << " " << chunkpos.y << " " << chunkpos.z << std::endl;
         // std::cout << blockpos.x << " " << blockpos.y << " " << blockpos.z << std::endl;
 
-        Block prevblock = Block(0, Vec3<float>(blockpos.x, blockpos.y, blockpos.z), Vec3<float>(0.0f, 0.0f, 0.0f), false, Vec3<float>(0.5f, 0.5f, 0.5f));
+        Block prevblock = Block(0, glm::vec3(blockpos.x, blockpos.y, blockpos.z), glm::vec3(0.0f, 0.0f, 0.0f), false, glm::vec3(0.5f, 0.5f, 0.5f));
         {
             std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
             prevblock = *(Server::getInstance().chunks[chunkpos]->getBlock(blockpos));
-            std::shared_ptr<Block> block = std::make_shared<Block>(id, blockpos, Vec3<float>(0.0f, 0.0f, 0.0f), (id == 0 ? false : true), Vec3<float>(0.5f, 0.5f, 0.5f));
+            std::shared_ptr<Block> block = std::make_shared<Block>(id, blockpos, glm::vec3(0.0f, 0.0f, 0.0f), (id == 0 ? false : true), glm::vec3(0.5f, 0.5f, 0.5f));
             Server::getInstance().chunks[chunkpos]->addBlock(blockpos, block);
         }
         // A_affectedChunks = Server::getInstance().chunks[chunkpos]->checkHeight(chunkpos, blockpos);
@@ -72,7 +76,7 @@ public:
         //
         // for (auto c : L_affectedChunks) {
         //     affectedChunks.insert(c);
-        //     Server::getInstance().chunks[c]->checkLights(c, Block(0, Vec3<float>(0.0f, 0.0f, 0.0f)));
+        //     Server::getInstance().chunks[c]->checkLights(c, Block(0, glm::vec3(0.0f, 0.0f, 0.0f)));
         // }
         // for (auto c : A_affectedChunks) {
         //     ambientChunks.insert(c);

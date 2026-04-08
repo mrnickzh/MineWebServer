@@ -6,19 +6,21 @@
 
 #include "Block.hpp"
 #include "PerlinNoise.hpp"
+#include "vec3Comparator.hpp"
 
 class ServerChunkMap {
 public:
-    // std::map<Vec3<float>, std::shared_ptr<Block>> blocks;
+    // std::map<glm::vec3, std::shared_ptr<Block>> blocks;
     std::array<std::shared_ptr<Block>, 512> blocks;
 
-    void addBlock(Vec3<float> blockPos, std::shared_ptr<Block> block);
-    std::shared_ptr<Block> getBlock(Vec3<float> blockPos);
-    void generate(Vec3<float> chunkPos);
-    void generateOres(Vec3<float> chunkPos, int oreBlockId, int clusterCount, int clusterSize, int minY, int maxY);
-    std::set<Vec3<float>> checkLights(Vec3<float> chunkPos, Block prevblock);
-    std::set<Vec3<float>> checkAmbient(Vec3<float> chunkPos);
-    std::set<Vec3<float>> checkHeight(Vec3<float> chunkPos, Vec3<float> blockPos);
+    bool checkValidPos(glm::vec3 pos);
+    void addBlock(glm::vec3 blockPos, std::shared_ptr<Block> block);
+    std::shared_ptr<Block> getBlock(glm::vec3 blockPos);
+    void generate(glm::vec3 chunkPos);
+    void generateOres(glm::vec3 chunkPos, int oreBlockId, int clusterCount, int clusterSize, int minY, int maxY);
+    std::set<glm::vec3, vec3Comparator> checkLights(glm::vec3 chunkPos, Block prevblock);
+    std::set<glm::vec3, vec3Comparator> checkAmbient(glm::vec3 chunkPos);
+    std::set<glm::vec3, vec3Comparator> checkHeight(glm::vec3 chunkPos, glm::vec3 blockPos);
     void resetAmbient();
     void resetLights();
 };

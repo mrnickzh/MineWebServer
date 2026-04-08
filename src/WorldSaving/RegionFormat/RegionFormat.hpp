@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Utils/ByteBuf.hpp>
-#include <Utils/Vec.hpp>
 
 class RegionFormat {
 public:
@@ -10,6 +9,6 @@ public:
     explicit RegionFormat(int version) : version(version) {}
     virtual ~RegionFormat() = default;
 
-    virtual void load(ByteBuf& buffer, Vec3<float> pos) = 0;
-    virtual void save(ByteBuf& buffer, Vec3<float> pos) = 0;
+    virtual void load(ByteBuf& buffer, glm::vec3 pos) = 0;
+    virtual void save(ByteBuf& buffer, glm::vec3 pos) = 0;
 };

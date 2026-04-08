@@ -4,7 +4,7 @@
 
 #include <mutex>
 
-void RegionFormat_V1::load(ByteBuf &buffer, Vec3<float> pos) {
+void RegionFormat_V1::load(ByteBuf &buffer, glm::vec3 pos) {
     int size = buffer.readInt();
 
     // std::cout << "Region " << pos.x << " " << pos.y << " " << pos.z << std::endl;
@@ -14,7 +14,7 @@ void RegionFormat_V1::load(ByteBuf &buffer, Vec3<float> pos) {
         float cx = buffer.readFloat();
         float cy = buffer.readFloat();
         float cz = buffer.readFloat();
-        Vec3<float> regionChunk = Vec3<float>(cx, cy, cz);
+        glm::vec3 regionChunk = glm::vec3(cx, cy, cz);
 
         // std::cout << "Chunk " << regionChunk.x << " " << regionChunk.y << " " << regionChunk.z << std::endl;
 
@@ -24,8 +24,8 @@ void RegionFormat_V1::load(ByteBuf &buffer, Vec3<float> pos) {
             float bz = buffer.readFloat();
             int id = buffer.readInt();
 
-            Vec3<float> blockPos = Vec3(bx, by, bz);
-            std::shared_ptr<Block> block = std::make_shared<Block>(id, blockPos, Vec3<float>(0.0f, 0.0f, 0.0f), (id == 0 ? false : true), Vec3<float>(0.5f, 0.5f, 0.5f));
+            glm::vec3 blockPos = glm::vec3(bx, by, bz);
+            std::shared_ptr<Block> block = std::make_shared<Block>(id, blockPos, glm::vec3(0.0f, 0.0f, 0.0f), (id == 0 ? false : true), glm::vec3(0.5f, 0.5f, 0.5f));
 
             for (int l = 0; l < 6; l++) {
                 block->lightLevels[l].x = buffer.readInt();
@@ -43,13 +43,13 @@ void RegionFormat_V1::load(ByteBuf &buffer, Vec3<float> pos) {
     }
 }
 
-void RegionFormat_V1::save(ByteBuf &buffer, Vec3<float> pos) {
+void RegionFormat_V1::save(ByteBuf &buffer, glm::vec3 pos) {
     int size = 0;
 
     for (int x = 0; x < 8; x++) {
         for (int y = 0; y < 8; y++) {
             for (int z = 0; z < 8; z++) {
-                Vec3<float> regionChunk = Vec3<float>((pos.x * 8.0f) + (float)x, (pos.y * 8.0f) + (float)y, (pos.z * 8.0f) + (float)z);
+                glm::vec3 regionChunk = glm::vec3((pos.x * 8.0f) + (float)x, (pos.y * 8.0f) + (float)y, (pos.z * 8.0f) + (float)z);
 
                 if (Server::getInstance().chunks.find(regionChunk) == Server::getInstance().chunks.end()) {
                     continue;
@@ -65,7 +65,7 @@ void RegionFormat_V1::save(ByteBuf &buffer, Vec3<float> pos) {
     for (int x = 0; x < 8; x++) {
         for (int y = 0; y < 8; y++) {
             for (int z = 0; z < 8; z++) {
-                Vec3<float> regionChunk = Vec3<float>((pos.x * 8.0f) + (float)x, (pos.y * 8.0f) + (float)y, (pos.z * 8.0f) + (float)z);
+                glm::vec3 regionChunk = glm::vec3((pos.x * 8.0f) + (float)x, (pos.y * 8.0f) + (float)y, (pos.z * 8.0f) + (float)z);
 
                 if (Server::getInstance().chunks.find(regionChunk) == Server::getInstance().chunks.end()) {
                     // std::cout << "No chunk " << regionChunk.x << " " << regionChunk.y << " " << regionChunk.z << std::endl;

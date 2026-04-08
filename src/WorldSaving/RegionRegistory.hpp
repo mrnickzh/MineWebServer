@@ -22,7 +22,7 @@ private:
         return nullptr;
     }
 public:
-    std::set<Vec3<float>> loadedRegions;
+    std::set<glm::vec3, vec3Comparator> loadedRegions;
 
     static RegionRegistory& getInstance() {
         static RegionRegistory instance;
@@ -47,14 +47,14 @@ public:
         return list;
     };
 
-    bool isLoaded(Vec3<float> pos) {
-        Vec3<float> currentRegion = Vec3<float>(floor(pos.x / 8.0f), floor(pos.y / 8.0f), floor(pos.z / 8.0f));
+    bool isLoaded(glm::vec3 pos) {
+        glm::vec3 currentRegion = glm::vec3(floor(pos.x / 8.0f), floor(pos.y / 8.0f), floor(pos.z / 8.0f));
         if (loadedRegions.contains(currentRegion)) { return true; }
         return false;
     }
 
-    void save(Vec3<float> pos) {
-        Vec3<float> currentRegion = Vec3<float>(floor(pos.x / 8.0f), floor(pos.y / 8.0f), floor(pos.z / 8.0f));
+    void save(glm::vec3 pos) {
+        glm::vec3 currentRegion = glm::vec3(floor(pos.x / 8.0f), floor(pos.y / 8.0f), floor(pos.z / 8.0f));
 
         ByteBuf bb(33554432);
         bb.writeInt(FORMAT_VERSION);
@@ -82,8 +82,8 @@ public:
         file.close();
     }
 
-    bool load(Vec3<float> pos) {
-        Vec3<float> currentRegion = Vec3<float>(floor(pos.x / 8.0f), floor(pos.y / 8.0f), floor(pos.z / 8.0f));
+    bool load(glm::vec3 pos) {
+        glm::vec3 currentRegion = glm::vec3(floor(pos.x / 8.0f), floor(pos.y / 8.0f), floor(pos.z / 8.0f));
 
         if (loadedRegions.contains(currentRegion)) { return true; }
         loadedRegions.insert(currentRegion);
@@ -154,21 +154,21 @@ public:
         std::vector<uint8_t> hbv = heightbuffer.toByteArray();
         outbuffer.insert(outbuffer.end(), hbv.begin(), hbv.end());
 
-        std::set<Vec3<float>> savedRegions;
+        std::set<glm::vec3, vec3Comparator> savedRegions;
         auto serverChunks = Server::getInstance().chunks;
 
         for (auto& chunk : serverChunks) {
-            Vec3<float> currentRegion = Vec3<float>(floor(chunk.first.x / 8.0f), floor(chunk.first.y / 8.0f), floor(chunk.first.z / 8.0f));
+            glm::vec3 currentRegion = glm::vec3(floor(chunk.first.x / 8.0f), floor(chunk.first.y / 8.0f), floor(chunk.first.z / 8.0f));
             if (savedRegions.contains(currentRegion)) { continue; }
             // std::cout << currentRegion.x << " " << currentRegion.y << " " << currentRegion.z << std::endl;
-            save(Vec3<float>((currentRegion.x * 8.0f), (currentRegion.y * 8.0f), (currentRegion.z * 8.0f)));
+            save(glm::vec3((currentRegion.x * 8.0f), (currentRegion.y * 8.0f), (currentRegion.z * 8.0f)));
             savedRegions.insert(currentRegion);
         }
 
         std::vector<uint8_t> worldbuffer;
         for (std::filesystem::directory_entry entry : std::filesystem::directory_iterator("regions")) {
             std::vector<std::string> regionCoords = strSplit(entry.path().stem().string(), "_");
-            Vec3<float> currentRegion = Vec3<float>(stof(regionCoords[0]), stof(regionCoords[1]), stof(regionCoords[2]));
+            glm::vec3 currentRegion = glm::vec3(stof(regionCoords[0]), stof(regionCoords[1]), stof(regionCoords[2]));
 
             std::ostringstream ss;
 #ifdef BUILD_TYPE_DEDICATED
@@ -272,8 +272,8 @@ public:
                 float by = hmbb.readFloat();
                 float bz = hmbb.readFloat();
                 // printf("hm x: %f, z: %f, h: %f, bx: %f, by: %f, bz: %f\n", hx, hy, cy, bx, by, bz);
-                Vec2<float> hpos = Vec2<float>(hx, hy);
-                Vec3<float> bpos = Vec3<float>(bx, by, bz);
+                glm::vec2 hpos = glm::vec2(hx, hy);
+                glm::vec3 bpos = glm::vec3(bx, by, bz);
                 HeightMap::getInstance().addMap(hpos, cy, bpos);
             }
         }
@@ -313,17 +313,17 @@ public:
             float rz = bb.readFloat();
             // std::cout << rx << " " << ry << " " << rz << std::endl;
 
-            rf->load(bb, Vec3<float>(rx, ry, rz));
-            loadedRegions.insert(Vec3<float>(rx, ry, rz));
+            rf->load(bb, glm::vec3(rx, ry, rz));
+            loadedRegions.insert(glm::vec3(rx, ry, rz));
 
 #ifdef BUILD_TYPE_DEDICATED
-            save(Vec3<float>(rx * 8.0f, ry * 8.0f, rz * 8.0f));
-            loadedRegions.erase(Vec3<float>(rx, ry, rz));
+            save(glm::vec3(rx * 8.0f, ry * 8.0f, rz * 8.0f));
+            loadedRegions.erase(glm::vec3(rx, ry, rz));
 
             for (int x = 0; x < 8; x++) {
                 for (int y = 0; y < 8; y++) {
                     for (int z = 0; z < 8; z++) {
-                        Vec3<float> regionChunk = Vec3<float>((rx * 8.0f) + (float)x, (ry * 8.0f) + (float)y, (rz * 8.0f) + (float)z);
+                        glm::vec3 regionChunk = glm::vec3((rx * 8.0f) + (float)x, (ry * 8.0f) + (float)y, (rz * 8.0f) + (float)z);
                         if (Server::getInstance().chunks.find(regionChunk) != Server::getInstance().chunks.end()) {
                             Server::getInstance().chunks.erase(regionChunk);
                         }

@@ -7,13 +7,13 @@
 #include "../Utils/ServerGetAABB.hpp"
 #include "Utils/ServerChunkMap.hpp"
 
-ServerPhysicsEngine::ServerPhysicsEngine(std::map<Vec3<float>, std::shared_ptr<ServerChunkMap>>* worldmap) {
+ServerPhysicsEngine::ServerPhysicsEngine(std::map<glm::vec3, std::shared_ptr<ServerChunkMap>, vec3Comparator>* worldmap) {
     chunkmap = worldmap;
 }
 
-void ServerPhysicsEngine::checkEntityChunk(std::shared_ptr<ServerPhysicsObject> entity, Vec3<float> prevpos) {
-    Vec3<float> prevChunk = Vec3<float>(floor(prevpos.x / 8.0f), floor(prevpos.y / 8.0f), floor(prevpos.z / 8.0f));
-    Vec3<float> currentChunk = Vec3<float>(floor(entity->object->position.x / 8.0f), floor(entity->object->position.y / 8.0f), floor(entity->object->position.z / 8.0f));
+void ServerPhysicsEngine::checkEntityChunk(std::shared_ptr<ServerPhysicsObject> entity, glm::vec3 prevpos) {
+    glm::vec3 prevChunk = glm::vec3(floor(prevpos.x / 8.0f), floor(prevpos.y / 8.0f), floor(prevpos.z / 8.0f));
+    glm::vec3 currentChunk = glm::vec3(floor(entity->object->position.x / 8.0f), floor(entity->object->position.y / 8.0f), floor(entity->object->position.z / 8.0f));
     if (prevChunk != currentChunk) {
         registeredObjects[currentChunk].push_back(entity);
         auto it = std::find_if(registeredObjects[prevChunk].begin(), registeredObjects[prevChunk].end(), [&entity](const std::shared_ptr<ServerPhysicsObject>& obj) {return obj == entity; });
@@ -23,7 +23,7 @@ void ServerPhysicsEngine::checkEntityChunk(std::shared_ptr<ServerPhysicsObject> 
     }
 }
 
-bool ServerPhysicsEngine::isColliding(Vec3<float> object1, Vec3<float> object2, Vec3<float> collider1, Vec3<float> collider2) {
+bool ServerPhysicsEngine::isColliding(glm::vec3 object1, glm::vec3 object2, glm::vec3 collider1, glm::vec3 collider2) {
     ServerAABB obj1 = ServerGetAABB::CP2AABB(collider1, object1);
     ServerAABB obj2 = ServerGetAABB::CP2AABB(collider2, object2);
 
@@ -44,23 +44,23 @@ bool ServerPhysicsEngine::isColliding(Vec3<float> object1, Vec3<float> object2, 
     return false;
 }
 
-bool ServerPhysicsEngine::possibleCollision(Vec3<float> position, Vec3<float> collider, const Block& object2) {
+bool ServerPhysicsEngine::possibleCollision(glm::vec3 position, glm::vec3 collider, const Block& object2) {
     if (!object2.cancollide) { return false; }
     return isColliding(position, object2.position, collider, object2.collider);
 }
 
-bool ServerPhysicsEngine::possibleEntityCollision(Vec3<float> position, Vec3<float> collider, std::shared_ptr<ServerEntity> object2) {
+bool ServerPhysicsEngine::possibleEntityCollision(glm::vec3 position, glm::vec3 collider, std::shared_ptr<ServerEntity> object2) {
     if (!object2->cancollide) { return false; }
     return isColliding(position, object2->position, collider, object2->collider);
 }
 
-std::vector<std::shared_ptr<ServerPhysicsObject>> ServerPhysicsEngine::possibleEntities(Vec3<float> position) {
+std::vector<std::shared_ptr<ServerPhysicsObject>> ServerPhysicsEngine::possibleEntities(glm::vec3 position) {
     std::vector<std::shared_ptr<ServerPhysicsObject>> obstacles;
-    Vec3<float> currentChunk = Vec3<float>(floor(position.x / 8.0f), floor(position.y / 8.0f), floor(position.z / 8.0f));
+    glm::vec3 currentChunk = glm::vec3(floor(position.x / 8.0f), floor(position.y / 8.0f), floor(position.z / 8.0f));
     for (int i = -1; i <= 1; i++) {
         for (int j = -1; j <= 1; j++) {
             for (int k = -1; k <= 1; k++) {
-                Vec3<float> resultChunk = Vec3<float>(currentChunk.x + (float)i, currentChunk.y + (float)j, currentChunk.z + (float)k);
+                glm::vec3 resultChunk = glm::vec3(currentChunk.x + (float)i, currentChunk.y + (float)j, currentChunk.z + (float)k);
                 if (!registeredObjects.count(resultChunk)) { continue; }
                 for (auto entity : registeredObjects[resultChunk]) {
                     obstacles.push_back(entity);
@@ -71,36 +71,36 @@ std::vector<std::shared_ptr<ServerPhysicsObject>> ServerPhysicsEngine::possibleE
     return obstacles;
 }
 
-std::vector<Block> ServerPhysicsEngine::possibleObstacles(Vec3<float> position) {
+std::vector<Block> ServerPhysicsEngine::possibleObstacles(glm::vec3 position) {
     std::vector<Block> obstacles;
-    Vec3<float> currentChunk = Vec3<float>(floor(position.x / 8.0f), floor(position.y / 8.0f), floor(position.z / 8.0f));
-    Vec3<float> currentChunkBlock = Vec3<float>(floor(std::fmod(position.x, 8.0f)), floor(std::fmod(position.y, 8.0f)), floor(std::fmod(position.z, 8.0f)));
+    glm::vec3 currentChunk = glm::vec3(floor(position.x / 8.0f), floor(position.y / 8.0f), floor(position.z / 8.0f));
+    glm::vec3 currentChunkBlock = glm::vec3(floor(std::fmod(position.x, 8.0f)), floor(std::fmod(position.y, 8.0f)), floor(std::fmod(position.z, 8.0f)));
     currentChunkBlock.x += (currentChunk.x < 0.0f ? (currentChunkBlock.x == 0.0f ? 0.0f : 8.0f) : 0.0f);
     currentChunkBlock.y += (currentChunk.y < 0.0f ? (currentChunkBlock.y == 0.0f ? 0.0f : 8.0f) : 0.0f);
     currentChunkBlock.z += (currentChunk.z < 0.0f ? (currentChunkBlock.z == 0.0f ? 0.0f : 8.0f) : 0.0f);
     // std::cout << currentChunkBlock.x << " " << currentChunkBlock.y << " " << currentChunkBlock.z << " " << currentChunk.x << " " << currentChunk.y << " " << currentChunk.z << std::endl;
     // std::cout << "=====BEGIN=====" << std::endl;
     for (int i = (int)currentChunkBlock.x - 1; i <= (int)currentChunkBlock.x + 1; i++) {
-        Vec3<float> collisionChunkX = currentChunk;
-        Vec3<float> collisionChunkBlockX = currentChunkBlock;
+        glm::vec3 collisionChunkX = currentChunk;
+        glm::vec3 collisionChunkBlockX = currentChunkBlock;
         collisionChunkBlockX.x = (float)i;
         if (i < 0) { collisionChunkX.x -= 1.0f; collisionChunkBlockX.x += 8.0f; }
         if (i > 7) { collisionChunkX.x += 1.0f; collisionChunkBlockX.x -= 8.0f; }
         for (int j = (int)currentChunkBlock.y - 1; j <= (int)currentChunkBlock.y + 2; j++) {
-            Vec3<float> collisionChunkY = collisionChunkX;
-            Vec3<float> collisionChunkBlockY = collisionChunkBlockX;
+            glm::vec3 collisionChunkY = collisionChunkX;
+            glm::vec3 collisionChunkBlockY = collisionChunkBlockX;
             collisionChunkBlockY.y = (float)j;
             if (j < 0) { collisionChunkY.y -= 1.0f; collisionChunkBlockY.y += 8.0f; }
             if (j > 7) { collisionChunkY.y += 1.0f; collisionChunkBlockY.y -= 8.0f; }
             for (int k = (int)currentChunkBlock.z - 1; k <= (int)currentChunkBlock.z + 1; k++) {
-                Vec3<float> collisionChunkZ = collisionChunkY;
-                Vec3<float> collisionChunkBlockZ = collisionChunkBlockY;
+                glm::vec3 collisionChunkZ = collisionChunkY;
+                glm::vec3 collisionChunkBlockZ = collisionChunkBlockY;
                 collisionChunkBlockZ.z = (float)k;
                 if (k < 0) { collisionChunkZ.z -= 1.0f; collisionChunkBlockZ.z += 8.0f; }
                 if (k > 7) { collisionChunkZ.z += 1.0f; collisionChunkBlockZ.z -= 8.0f; }
                 if ((*chunkmap).find(collisionChunkZ) == (*chunkmap).end()) { return obstacles; }
                 std::shared_ptr<Block> realblock = (*chunkmap)[collisionChunkZ]->getBlock(collisionChunkBlockZ);
-                Vec3<float> abspos = Vec3<float>(realblock->position.x + (collisionChunkZ.x * 8.0f), realblock->position.y + (collisionChunkZ.y * 8.0f), realblock->position.z + (collisionChunkZ.z * 8.0f));
+                glm::vec3 abspos = glm::vec3(realblock->position.x + (collisionChunkZ.x * 8.0f), realblock->position.y + (collisionChunkZ.y * 8.0f), realblock->position.z + (collisionChunkZ.z * 8.0f));
                 obstacles.push_back(Block(realblock->id, abspos, realblock->rotation, realblock->cancollide, realblock->collider));
                 // std::cout << collisionChunkZ.x << ", " << collisionChunkZ.y << ", " << collisionChunkZ.z << ", " << collisionChunkBlockZ.x << ", " << collisionChunkBlockZ.y << ", " << collisionChunkBlockZ.z << std::endl;
             }
@@ -111,13 +111,13 @@ std::vector<Block> ServerPhysicsEngine::possibleObstacles(Vec3<float> position) 
 }
 
 void ServerPhysicsEngine::calculateVelocity(std::shared_ptr<ServerPhysicsObject> obj) {
-    Vec3<float> vel = obj->velocity;
-    Vec3<float> pos;
+    glm::vec3 vel = obj->velocity;
+    glm::vec3 pos;
     {
         std::lock_guard<std::mutex> lock(Server::getInstance().serverEntityMutex);
         pos = obj->getPosition();
     }
-    Vec3<float> prevpos = pos;
+    glm::vec3 prevpos = pos;
 
     // std::cout << vel.x << " " << vel.y << " " << vel.z << " vel" << std::endl;
     // std::cout << pos.x << " " << pos.y << " " << pos.z << " pos" << std::endl;
@@ -142,13 +142,13 @@ void ServerPhysicsEngine::calculateVelocity(std::shared_ptr<ServerPhysicsObject>
             bool yCollision = false;
             bool zCollision = false;
 
-            if (possibleEntityCollision(Vec3<float>(pos.x + vel.x, pos.y, pos.z), obj->getCollider(), entity->object)) { entity->velocity.x += vel.x / 2.0f; vel.x -= vel.x / 2.0f; xCollision = true; }
-            if (possibleEntityCollision(Vec3<float>(pos.x, pos.y, pos.z + vel.z), obj->getCollider(), entity->object)) { entity->velocity.y += vel.y / 2.0f; vel.y -= vel.y / 2.0f; yCollision = true; }
-            if (possibleEntityCollision(Vec3<float>(pos.x, pos.y + vel.y, pos.z), obj->getCollider(), entity->object)) { entity->velocity.z += vel.z / 2.0f; vel.z -= vel.z / 2.0f; zCollision = true;}
+            if (possibleEntityCollision(glm::vec3(pos.x + vel.x, pos.y, pos.z), obj->getCollider(), entity->object)) { entity->velocity.x += vel.x / 2.0f; vel.x -= vel.x / 2.0f; xCollision = true; }
+            if (possibleEntityCollision(glm::vec3(pos.x, pos.y, pos.z + vel.z), obj->getCollider(), entity->object)) { entity->velocity.y += vel.y / 2.0f; vel.y -= vel.y / 2.0f; yCollision = true; }
+            if (possibleEntityCollision(glm::vec3(pos.x, pos.y + vel.y, pos.z), obj->getCollider(), entity->object)) { entity->velocity.z += vel.z / 2.0f; vel.z -= vel.z / 2.0f; zCollision = true;}
 
-            if (possibleEntityCollision(Vec3<float>(pos.x + vel.x, pos.y, pos.z + vel.z), obj->getCollider(), entity->object)) { if (!xCollision) { entity->velocity.x += vel.x / 2.0f; vel.x -= vel.x / 2.0f; } if (!zCollision) { entity->velocity.z += vel.z / 2.0f; vel.z -= vel.z / 2.0f; } }
-            if (possibleEntityCollision(Vec3<float>(pos.x + vel.x, pos.y + vel.y, pos.z), obj->getCollider(), entity->object)) { if (!xCollision) { entity->velocity.x += vel.x / 2.0f; vel.x -= vel.x / 2.0f; } if (!yCollision) { entity->velocity.y += vel.y / 2.0f; vel.y -= vel.y / 2.0f; } }
-            if (possibleEntityCollision(Vec3<float>(pos.x, pos.y + vel.y, pos.z + vel.z), obj->getCollider(), entity->object)) { if (!yCollision) { entity->velocity.y += vel.y / 2.0f; vel.y -= vel.y / 2.0f; } if (!zCollision) { entity->velocity.z += vel.z / 2.0f; vel.z -= vel.z / 2.0f; } }
+            if (possibleEntityCollision(glm::vec3(pos.x + vel.x, pos.y, pos.z + vel.z), obj->getCollider(), entity->object)) { if (!xCollision) { entity->velocity.x += vel.x / 2.0f; vel.x -= vel.x / 2.0f; } if (!zCollision) { entity->velocity.z += vel.z / 2.0f; vel.z -= vel.z / 2.0f; } }
+            if (possibleEntityCollision(glm::vec3(pos.x + vel.x, pos.y + vel.y, pos.z), obj->getCollider(), entity->object)) { if (!xCollision) { entity->velocity.x += vel.x / 2.0f; vel.x -= vel.x / 2.0f; } if (!yCollision) { entity->velocity.y += vel.y / 2.0f; vel.y -= vel.y / 2.0f; } }
+            if (possibleEntityCollision(glm::vec3(pos.x, pos.y + vel.y, pos.z + vel.z), obj->getCollider(), entity->object)) { if (!yCollision) { entity->velocity.y += vel.y / 2.0f; vel.y -= vel.y / 2.0f; } if (!zCollision) { entity->velocity.z += vel.z / 2.0f; vel.z -= vel.z / 2.0f; } }
         
         }
     }
@@ -158,9 +158,9 @@ void ServerPhysicsEngine::calculateVelocity(std::shared_ptr<ServerPhysicsObject>
 
     for (auto obstacle : obstacles) {
         // printf("%f %f %f %d %d\n", obstacle->position.x, obstacle->position.y, obstacle->position.z, obstacle->id, (int)obstacle->cancollide);
-        if (possibleCollision(Vec3<float>(pos.x + vel.x, pos.y, pos.z), obj->getCollider(), obstacle)) { XCollision = true; }
-        if (possibleCollision(Vec3<float>(pos.x, pos.y, pos.z + vel.z), obj->getCollider(), obstacle)) { ZCollision = true; }
-        if (possibleCollision(Vec3<float>(pos.x, pos.y + vel.y, pos.z), obj->getCollider(), obstacle)) { YCollision = true; }
+        if (possibleCollision(glm::vec3(pos.x + vel.x, pos.y, pos.z), obj->getCollider(), obstacle)) { XCollision = true; }
+        if (possibleCollision(glm::vec3(pos.x, pos.y, pos.z + vel.z), obj->getCollider(), obstacle)) { ZCollision = true; }
+        if (possibleCollision(glm::vec3(pos.x, pos.y + vel.y, pos.z), obj->getCollider(), obstacle)) { YCollision = true; }
         // std::cout << XCollision << " " << YCollision << " " << ZCollision << " col" << std::endl;
     }
 
@@ -169,9 +169,9 @@ void ServerPhysicsEngine::calculateVelocity(std::shared_ptr<ServerPhysicsObject>
     if (ZCollision) { vel.z = 0.0f; }
 
     for (auto obstacle : obstacles) {
-        if (possibleCollision(Vec3<float>(pos.x + vel.x, pos.y, pos.z + vel.z), obj->getCollider(), obstacle)) { XCollision = true; ZCollision = true; }
-        if (possibleCollision(Vec3<float>(pos.x + vel.x, pos.y + vel.y, pos.z), obj->getCollider(), obstacle)) { XCollision = true; YCollision = true; }
-        if (possibleCollision(Vec3<float>(pos.x, pos.y + vel.y, pos.z + vel.z), obj->getCollider(), obstacle)) { YCollision = true; ZCollision = true; }
+        if (possibleCollision(glm::vec3(pos.x + vel.x, pos.y, pos.z + vel.z), obj->getCollider(), obstacle)) { XCollision = true; ZCollision = true; }
+        if (possibleCollision(glm::vec3(pos.x + vel.x, pos.y + vel.y, pos.z), obj->getCollider(), obstacle)) { XCollision = true; YCollision = true; }
+        if (possibleCollision(glm::vec3(pos.x, pos.y + vel.y, pos.z + vel.z), obj->getCollider(), obstacle)) { YCollision = true; ZCollision = true; }
     }
 
     if (!XCollision) { pos.x += vel.x; }
@@ -212,34 +212,34 @@ void ServerPhysicsEngine::calculateVelocity(std::shared_ptr<ServerPhysicsObject>
 
 void ServerPhysicsEngine::registerObject(std::shared_ptr<ServerEntity> object, float mass) {
     std::shared_ptr<ServerPhysicsObject> physicsObject = std::make_shared<ServerPhysicsObject>(object, mass);
-    Vec3<float> currentChunk = Vec3<float>(floor(object->position.x / 8.0f), floor(object->position.y / 8.0f), floor(object->position.z / 8.0f));
+    glm::vec3 currentChunk = glm::vec3(floor(object->position.x / 8.0f), floor(object->position.y / 8.0f), floor(object->position.z / 8.0f));
     registeredObjects[currentChunk].push_back(physicsObject);
 }
 
 void ServerPhysicsEngine::unregisterObject(std::shared_ptr<ServerEntity> object) {
-    Vec3<float> currentChunk = Vec3<float>(floor(object->position.x / 8.0f), floor(object->position.y / 8.0f), floor(object->position.z / 8.0f));
+    glm::vec3 currentChunk = glm::vec3(floor(object->position.x / 8.0f), floor(object->position.y / 8.0f), floor(object->position.z / 8.0f));
     auto it = std::find_if(registeredObjects[currentChunk].begin(), registeredObjects[currentChunk].end(), [&object](const std::shared_ptr<ServerPhysicsObject>& obj) {return obj->object == object; });
     if (it != registeredObjects[currentChunk].end()) {  registeredObjects[currentChunk].erase(it); }
 }
 
-void ServerPhysicsEngine::addVelocityRotation(std::shared_ptr<ServerEntity> object, Vec3<float> velocity) {
-    Vec3<float> currentChunk = Vec3<float>(floor(object->position.x / 8.0f), floor(object->position.y / 8.0f), floor(object->position.z / 8.0f));
+void ServerPhysicsEngine::addVelocityRotation(std::shared_ptr<ServerEntity> object, glm::vec3 velocity) {
+    glm::vec3 currentChunk = glm::vec3(floor(object->position.x / 8.0f), floor(object->position.y / 8.0f), floor(object->position.z / 8.0f));
     auto it = std::find_if(registeredObjects[currentChunk].begin(), registeredObjects[currentChunk].end(), [&object](const std::shared_ptr<ServerPhysicsObject>& obj) {return obj->object == object; });
     if (it != registeredObjects[currentChunk].end()) { 
-        Vec3<float> rotation = Vec3<float>(object->rotation.x * (M_PI / 180.0), object->rotation.y * (M_PI / 180.0), object->rotation.z * (M_PI / 180.0));
-        Vec3<float> real_velocity = Vec3<float>(0.0f, 0.0f, 0.0f);
+        glm::vec3 rotation = glm::radians(object->rotation);
+        glm::vec3 real_velocity = glm::vec3(0.0f, 0.0f, 0.0f);
         real_velocity.x = (velocity.x * std::cos(rotation.y) * std::cos(rotation.z)) + (velocity.z * -std::sin(rotation.y) * std::cos(rotation.z));
         real_velocity.y = velocity.y * std::sin(rotation.z);
         real_velocity.z = (velocity.x * std::sin(rotation.y) * std::cos(rotation.z)) + (velocity.z * std::cos(rotation.y) * std::cos(rotation.z));
-        it->get()->velocity = Vec3<float>(it->get()->velocity.x + real_velocity.x, it->get()->velocity.y + real_velocity.y, it->get()->velocity.z + real_velocity.z);
+        it->get()->velocity = glm::vec3(it->get()->velocity.x + real_velocity.x, it->get()->velocity.y + real_velocity.y, it->get()->velocity.z + real_velocity.z);
     }
 }
 
-void ServerPhysicsEngine::addVelocityClampedRotation(std::shared_ptr<ServerEntity> object, Vec3<float> velocity, Vec3<float> limit) {
-    Vec3<float> currentChunk = Vec3<float>(floor(object->position.x / 8.0f), floor(object->position.y / 8.0f), floor(object->position.z / 8.0f));
+void ServerPhysicsEngine::addVelocityClampedRotation(std::shared_ptr<ServerEntity> object, glm::vec3 velocity, glm::vec3 limit) {
+    glm::vec3 currentChunk = glm::vec3(floor(object->position.x / 8.0f), floor(object->position.y / 8.0f), floor(object->position.z / 8.0f));
     auto it = std::find_if(registeredObjects[currentChunk].begin(), registeredObjects[currentChunk].end(), [&object](const std::shared_ptr<ServerPhysicsObject>& obj) {return obj->object == object; });
     if (it != registeredObjects[currentChunk].end()) { 
-        Vec3<float> rotation = Vec3<float>(object->rotation.x * (M_PI / 180.0), object->rotation.y * (M_PI / 180.0), object->rotation.z * (M_PI / 180.0));
+        glm::vec3 rotation = glm::radians(object->rotation);
 
         // std::cout << rotation.x << " " << rotation.y << " " << rotation.z << std::endl;
         // std::cout << rotation.y << " " << velocity.x * std::sin(rotation.y) << std::endl;
@@ -255,7 +255,7 @@ void ServerPhysicsEngine::addVelocityClampedRotation(std::shared_ptr<ServerEntit
         // std::cout << velocity.z * std::cos(rotation.y) * std::cos(rotation.z) << " zz" << std::endl;
         // std::cout << velocity.x * std::sin(rotation.y) * std::cos(rotation.z) << " zx" << std::endl;
 
-        Vec3<float> real_velocity = Vec3<float>(0.0f, 0.0f, 0.0f);
+        glm::vec3 real_velocity = glm::vec3(0.0f, 0.0f, 0.0f);
         real_velocity.x = (velocity.x * std::cos(rotation.y) * std::cos(rotation.z)) + (velocity.z * -std::sin(rotation.y) * std::cos(rotation.z));
         real_velocity.y = velocity.y * std::sin(rotation.z);
         real_velocity.z = (velocity.x * std::sin(rotation.y) * std::cos(rotation.z)) + (velocity.z * std::cos(rotation.y) * std::cos(rotation.z));
@@ -274,38 +274,38 @@ void ServerPhysicsEngine::addVelocityClampedRotation(std::shared_ptr<ServerEntit
         // std::cout << (velocity.x * std::cos(rotation.y) * std::cos(rotation.z)) + (velocity.z * std::sin(rotation.y) * std::cos(rotation.z)) << " " << (velocity.x * std::sin(rotation.y) * std::cos(rotation.z)) + (velocity.z * std::cos(rotation.y) * std::cos(rotation.z)) << std::endl;
         // std::cout << real_velocity.x << " " << real_velocity.y << " " << real_velocity.z << std::endl;
 
-        it->get()->velocity = Vec3<float>(real_velocity.x, real_velocity.y, real_velocity.z);
+        it->get()->velocity = glm::vec3(real_velocity.x, real_velocity.y, real_velocity.z);
     }}
 
-void ServerPhysicsEngine::setVelocity(std::shared_ptr<ServerEntity> object, Vec3<float> velocity) {
-    Vec3<float> currentChunk = Vec3<float>(floor(object->position.x / 8.0f), floor(object->position.y / 8.0f), floor(object->position.z / 8.0f));
+void ServerPhysicsEngine::setVelocity(std::shared_ptr<ServerEntity> object, glm::vec3 velocity) {
+    glm::vec3 currentChunk = glm::vec3(floor(object->position.x / 8.0f), floor(object->position.y / 8.0f), floor(object->position.z / 8.0f));
     auto it = std::find_if(registeredObjects[currentChunk].begin(), registeredObjects[currentChunk].end(), [&object](const std::shared_ptr<ServerPhysicsObject>& obj) {return obj->object == object; });
     if (it != registeredObjects[currentChunk].end()) {  it->get()->velocity = velocity; }
 }
 
-void ServerPhysicsEngine::addVelocity(std::shared_ptr<ServerEntity> object, Vec3<float> velocity) {
-    Vec3<float> currentChunk = Vec3<float>(floor(object->position.x / 8.0f), floor(object->position.y / 8.0f), floor(object->position.z / 8.0f));
+void ServerPhysicsEngine::addVelocity(std::shared_ptr<ServerEntity> object, glm::vec3 velocity) {
+    glm::vec3 currentChunk = glm::vec3(floor(object->position.x / 8.0f), floor(object->position.y / 8.0f), floor(object->position.z / 8.0f));
     auto it = std::find_if(registeredObjects[currentChunk].begin(), registeredObjects[currentChunk].end(), [&object](const std::shared_ptr<ServerPhysicsObject>& obj) {return obj->object == object; });
-    if (it != registeredObjects[currentChunk].end()) {  it->get()->velocity = Vec3<float>(it->get()->velocity.x + velocity.x, it->get()->velocity.y + velocity.y, it->get()->velocity.z + velocity.z); }
+    if (it != registeredObjects[currentChunk].end()) {  it->get()->velocity = glm::vec3(it->get()->velocity.x + velocity.x, it->get()->velocity.y + velocity.y, it->get()->velocity.z + velocity.z); }
 }
 
-void ServerPhysicsEngine::addVelocityClamped(std::shared_ptr<ServerEntity> object, Vec3<float> velocity, Vec3<float> limit) {
-    Vec3<float> currentChunk = Vec3<float>(floor(object->position.x / 8.0f), floor(object->position.y / 8.0f), floor(object->position.z / 8.0f));
+void ServerPhysicsEngine::addVelocityClamped(std::shared_ptr<ServerEntity> object, glm::vec3 velocity, glm::vec3 limit) {
+    glm::vec3 currentChunk = glm::vec3(floor(object->position.x / 8.0f), floor(object->position.y / 8.0f), floor(object->position.z / 8.0f));
     auto it = std::find_if(registeredObjects[currentChunk].begin(), registeredObjects[currentChunk].end(), [&object](const std::shared_ptr<ServerPhysicsObject>& obj) {return obj->object == object; });
     if (it != registeredObjects[currentChunk].end()) { 
-        it->get()->velocity = Vec3<float>(std::clamp(it->get()->velocity.x + velocity.x, -limit.x, limit.x), std::clamp(it->get()->velocity.y + velocity.y, -limit.y, limit.y), std::clamp(it->get()->velocity.z + velocity.z, -limit.z, limit.z));
+        it->get()->velocity = glm::vec3(std::clamp(it->get()->velocity.x + velocity.x, -limit.x, limit.x), std::clamp(it->get()->velocity.y + velocity.y, -limit.y, limit.y), std::clamp(it->get()->velocity.z + velocity.z, -limit.z, limit.z));
     }
 }
 
-Vec3<float> ServerPhysicsEngine::getVelocity(std::shared_ptr<ServerEntity> object) {
-    Vec3<float> currentChunk = Vec3<float>(floor(object->position.x / 8.0f), floor(object->position.y / 8.0f), floor(object->position.z / 8.0f));
+glm::vec3 ServerPhysicsEngine::getVelocity(std::shared_ptr<ServerEntity> object) {
+    glm::vec3 currentChunk = glm::vec3(floor(object->position.x / 8.0f), floor(object->position.y / 8.0f), floor(object->position.z / 8.0f));
     auto it = std::find_if(registeredObjects[currentChunk].begin(), registeredObjects[currentChunk].end(), [&object](const std::shared_ptr<ServerPhysicsObject>& obj) {return obj->object == object; });
     if (it != registeredObjects[currentChunk].end()) { return it->get()->velocity; }
-    return Vec3<float>(0.0f, 0.0f, 0.0f);
+    return glm::vec3(0.0f, 0.0f, 0.0f);
 }
 
 bool ServerPhysicsEngine::isOnFoot(std::shared_ptr<ServerEntity> object) {
-    Vec3<float> currentChunk = Vec3<float>(floor(object->position.x / 8.0f), floor(object->position.y / 8.0f), floor(object->position.z / 8.0f));
+    glm::vec3 currentChunk = glm::vec3(floor(object->position.x / 8.0f), floor(object->position.y / 8.0f), floor(object->position.z / 8.0f));
     auto it = std::find_if(registeredObjects[currentChunk].begin(), registeredObjects[currentChunk].end(), [&object](const std::shared_ptr<ServerPhysicsObject>& obj) {return obj->object == object; });
     if (it != registeredObjects[currentChunk].end()) { 
         std::vector<Block> obstacles = possibleObstacles(it->get()->getPosition());
@@ -330,25 +330,25 @@ bool ServerPhysicsEngine::isOnFoot(std::shared_ptr<ServerEntity> object) {
     return false;
 }
 
-ServerRaycastResult ServerPhysicsEngine::raycast(float length, Vec3<float> startpos, Vec3<float> rotation) {
-    ServerRaycastResult result(false, length, Vec3<float>(0.0f, 0.0f, 0.0f), Vec3<float>(0.0f, 0.0f, 0.0f), nullptr, Vec3<float>(0.0f, 0.0f, 0.0f), Vec3<float>(0.0f, 0.0f, 0.0f), nullptr);
+ServerRaycastResult ServerPhysicsEngine::raycast(float length, glm::vec3 startpos, glm::vec3 rotation) {
+    ServerRaycastResult result(false, length, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), nullptr, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), nullptr);
 
-    rotation = Vec3<float>(rotation.x * (M_PI / 180.0), rotation.y * (M_PI / 180.0), rotation.z * (M_PI / 180.0));
-    Vec3<float> raystep = Vec3<float>(0.2f, 0.2f, 0.0f);
-    Vec3<float> direction = Vec3<float>(0.0f, 0.0f, 0.0f);
+    rotation = glm::radians(rotation);
+    glm::vec3 raystep = glm::vec3(0.2f, 0.2f, 0.0f);
+    glm::vec3 direction = glm::vec3(0.0f, 0.0f, 0.0f);
     int steps = 0;
 
     direction.x = (raystep.x * std::cos(rotation.y) * std::cos(rotation.z)) + (raystep.z * -std::sin(rotation.y) * std::cos(rotation.z));
     direction.y = raystep.y * std::sin(rotation.z);
     direction.z = (raystep.x * std::sin(rotation.y) * std::cos(rotation.z)) + (raystep.z * std::cos(rotation.y) * std::cos(rotation.z));
 
-    Vec3<float> endpos = Vec3<float>(direction.x * std::round(length / 0.2f), direction.y * std::round(length / 0.2f), direction.z * std::round(length / 0.2f));
+    glm::vec3 endpos = glm::vec3(direction.x * std::round(length / 0.2f), direction.y * std::round(length / 0.2f), direction.z * std::round(length / 0.2f));
 
     while (steps < (int)std::round(length / 0.2f)) {
-        Vec3<float> position = startpos + Vec3<float>(direction.x * (float)steps, direction.y * (float)steps, direction.z * (float)steps);
+        glm::vec3 position = startpos + glm::vec3(direction.x * (float)steps, direction.y * (float)steps, direction.z * (float)steps);
 
-        Vec3<float> currentChunk = Vec3<float>(floor((position.x + 0.5f) / 8.0f), floor((position.y + 0.5f) / 8.0f), floor((position.z + 0.5f) / 8.0f));
-        Vec3<float> currentChunkBlock = Vec3<float>((int)round(std::fmod(position.x, 8.0f)), (int)round(std::fmod(position.y, 8.0f)), (int)round(std::fmod(position.z, 8.0f)));
+        glm::vec3 currentChunk = glm::vec3(floor((position.x + 0.5f) / 8.0f), floor((position.y + 0.5f) / 8.0f), floor((position.z + 0.5f) / 8.0f));
+        glm::vec3 currentChunkBlock = glm::vec3((int)round(std::fmod(position.x, 8.0f)), (int)round(std::fmod(position.y, 8.0f)), (int)round(std::fmod(position.z, 8.0f)));
         // std::cout << currentChunk.x << ", " << currentChunk.y << ", " << currentChunk.z << std::endl;
         // std::cout << currentChunkBlock.x << ", " << currentChunkBlock.y << ", " << currentChunkBlock.z << std::endl;
         currentChunkBlock.x += (currentChunk.x < 0.0f ? (currentChunkBlock.x == 0.0f ? 0.0f : 8.0f) : 0.0f);
@@ -361,8 +361,8 @@ ServerRaycastResult ServerPhysicsEngine::raycast(float length, Vec3<float> start
         // std::cout << currentChunk.x << ", " << currentChunk.y << ", " << currentChunk.z << std::endl;
         // std::cout << currentChunkBlock.x << ", " << currentChunkBlock.y << ", " << currentChunkBlock.z << std::endl;
         // std::cout << "==============" << std::endl;
-        Vec3<float> collisionChunk = currentChunk;
-        Vec3<float> collisionChunkBlock = currentChunkBlock;
+        glm::vec3 collisionChunk = currentChunk;
+        glm::vec3 collisionChunkBlock = currentChunkBlock;
         // if (currentChunk.x < 0) { collisionChunk.x -= 1.0f; collisionChunkBlock.x += 8.0f; }
         // if (currentChunk.x > 7) { collisionChunk.x += 1.0f; collisionChunkBlock.x -= 8.0f; }
         // if (currentChunk.y < 0) { collisionChunk.y -= 1.0f; collisionChunkBlock.y += 8.0f; }
@@ -377,7 +377,7 @@ ServerRaycastResult ServerPhysicsEngine::raycast(float length, Vec3<float> start
             // std::cout << object2->position.x << " " << object2->position.y << " " << object2->position.z << " " << object2->cancollide << std::endl;
             if (object2->cancollide) {
                 result.hit = true;
-                result.distance = std::sqrt(std::pow(startpos.x - object2->position.x, 2) + std::pow(startpos.y - object2->position.y, 2) + std::pow(startpos.z - object2->position.z, 2));
+                result.distance = glm::distance(startpos, object2->position);
                 result.blockpos = collisionChunkBlock;
                 result.chunkpos = collisionChunk;
                 result.object = object2;
@@ -392,7 +392,7 @@ ServerRaycastResult ServerPhysicsEngine::raycast(float length, Vec3<float> start
             }
         }
 
-        if (std::sqrt(std::pow(position.x - startpos.x, 2) + std::pow(position.y - startpos.y, 2) + std::pow(position.z - startpos.z, 2)) > std::sqrt(std::pow(endpos.x, 2) + std::pow(endpos.y, 2) + std::pow(endpos.z, 2))) {
+        if (glm::length(position - startpos) > glm::length(endpos)) {
             break;
         }
 
@@ -406,7 +406,7 @@ void ServerPhysicsEngine::step() {
         for (auto object : objchunk.second) {
             if (object == nullptr) { continue; }
             if (object->frozen) { continue; }
-            Vec3<float> tmpPos = Vec3<float>(objchunk.first.x * 8.0f, objchunk.first.y * 8.0f, objchunk.first.z * 8.0f);
+            glm::vec3 tmpPos = glm::vec3(objchunk.first.x * 8.0f, objchunk.first.y * 8.0f, objchunk.first.z * 8.0f);
             checkEntityChunk(object, tmpPos);
             calculateVelocity(object);
         }

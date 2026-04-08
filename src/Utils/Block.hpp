@@ -1,15 +1,19 @@
 #pragma once
-#include "Vec.hpp"
+
+#define GLM_FORCE_PURE
+#include "../../lib/glm/glm.hpp"
+#include "../../lib/glm/gtc/matrix_transform.hpp"
+#include "../../lib/glm/gtc/type_ptr.hpp"
 
 class Block {
 public:
     int id;
-    Vec3<float> position;
-    Vec3<float> rotation;
-    Vec2<int> lightLevels[6] = {Vec2<int>{0, -5}, Vec2<int>{0, -5}, Vec2<int>{0, -5}, Vec2<int>{0, -5}, Vec2<int>{0, -5}, Vec2<int>{0, -5}};
+    glm::vec3 position;
+    glm::vec3 rotation;
+    glm::ivec2 lightLevels[6] = {glm::vec2{0, -5}, glm::vec2{0, -5}, glm::vec2{0, -5}, glm::vec2{0, -5}, glm::vec2{0, -5}, glm::vec2{0, -5}};
     bool cancollide;
-    Vec3<float> collider;
+    glm::vec3 collider;
 
-    Block(int id, Vec3<float> position, Vec3<float> rotation, bool cancollide, Vec3<float> collider) : id(id), position(position), rotation(rotation), cancollide(cancollide), collider(collider) {};
+    Block(int id, glm::vec3 position, glm::vec3 rotation, bool cancollide, glm::vec3 collider) : id(id), position(position), rotation(rotation), cancollide(cancollide), collider(collider) {};
 };
 

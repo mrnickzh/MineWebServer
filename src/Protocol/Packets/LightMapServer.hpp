@@ -4,11 +4,10 @@
 #include "Server.hpp"
 #include "Protocol/ServerPacket.hpp"
 #include "Utils/ServerChunkMap.hpp"
-#include "Utils/Vec.hpp"
 
 class LightMapServer : public ServerPacket {
     public:
-        Vec3<float> chunkpos;
+        glm::vec3 chunkpos;
 
     void receive(ByteBuf &buffer) override {}
 
@@ -22,7 +21,7 @@ class LightMapServer : public ServerPacket {
         for (int x = 0; x < 8; x++) {
             for (int y = 0; y < 8; y++) {
                 for (int z = 0; z < 8; z++) {
-                    std::shared_ptr<Block> block = chunkMap->getBlock(Vec3<float>((float)x, (float)y, (float)z));
+                    std::shared_ptr<Block> block = chunkMap->getBlock(glm::vec3((float)x, (float)y, (float)z));
                     buffer.writeFloat(block->position.x);
                     buffer.writeFloat(block->position.y);
                     buffer.writeFloat(block->position.z);

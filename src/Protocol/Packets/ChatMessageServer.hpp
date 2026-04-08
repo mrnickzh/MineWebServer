@@ -28,7 +28,7 @@ public:
             if (args.size() < 1) { return; }
             if (args[0] == "entity") {
                 std::string euuid = uuid::v4::UUID::New().String();
-                std::shared_ptr<ServerEntity> entity = std::make_shared<ServerEntity>(euuid, 50, Vec3<float>(0.0f, 5.0f, 0.0f), Vec3<float>(0.0f, 0.0f, 0.0f), true, Vec3<float>(0.25f, 0.75f, 0.25f));
+                std::shared_ptr<ServerEntity> entity = std::make_shared<ServerEntity>(euuid, 50, glm::vec3(0.0f, 5.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), true, glm::vec3(0.25f, 0.75f, 0.25f));
                 Server::getInstance().entities[euuid] = entity;
                 Server::getInstance().serverPhysicsEngine->registerObject(entity, 1.0f);
 
@@ -40,7 +40,7 @@ public:
                 inputpacket.uuid = euuid;
                 inputpacket.position = entity->position;
                 inputpacket.rotation = entity->rotation;
-                inputpacket.velocity = Vec3<float>(0.0f, 0.0f, 0.0f);
+                inputpacket.velocity = glm::vec3(0.0f, 0.0f, 0.0f);
 
                 for (auto& s : Server::getInstance().clients) {
                     Server::getInstance().sendPacket(s.first, &packet);

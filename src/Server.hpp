@@ -12,10 +12,14 @@
 #include "Protocol/ClientSession.hpp"
 #include "Protocol/ServerPacket.hpp"
 #include "Utils/HeightMap.hpp"
-#include "Utils/Vec.hpp"
 #include "Utils/ServerChunkMap.hpp"
 #include "Utils/ServerEntity.hpp"
+#include "Utils/vec3Comparator.hpp"
 
+#define GLM_FORCE_PURE
+#include "../lib/glm/glm.hpp"
+#include "../lib/glm/gtc/matrix_transform.hpp"
+#include "../lib/glm/gtc/type_ptr.hpp"
 
 struct SeedMap {
 public:
@@ -54,7 +58,7 @@ public:
     std::function<void(ClientSession*, std::vector<uint8_t>)> callback;
     std::map<ClientSession*, void*> clients;
 
-    std::map<Vec3<float>, std::shared_ptr<ServerChunkMap>> chunks;
+    std::map<glm::vec3, std::shared_ptr<ServerChunkMap>, vec3Comparator> chunks;
     std::map<std::string, std::shared_ptr<ServerEntity>> entities;
 
     std::mutex chunksMutex;
@@ -64,8 +68,8 @@ public:
 
     std::mutex lightUpdateQueueMutex;
     std::mutex lightUpdateFallbackQueueMutex;
-    std::deque<std::pair<Vec3<float>, Block>> lightUpdateQueue;
-    std::deque<std::pair<Vec3<float>, Block>> lightUpdateFallbackQueue;
+    std::deque<std::pair<glm::vec3, Block>> lightUpdateQueue;
+    std::deque<std::pair<glm::vec3, Block>> lightUpdateFallbackQueue;
 
 #ifndef BUILD_TYPE_DEDICATED
     std::mutex serverPacketQueueMutex;
