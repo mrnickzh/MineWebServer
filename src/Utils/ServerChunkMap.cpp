@@ -63,6 +63,8 @@ void ServerChunkMap::generateOres(glm::vec3 chunkPos,  int oreBlockId, int clust
 }
 
 void ServerChunkMap::generate(glm::vec3 chunkPos) {
+    HeightMap::getInstance().addMap(glm::vec2(chunkPos.x, chunkPos.z));
+
     if (chunkPos.y > 3.0f) {
         for (int x = 0; x < 8; x++) {
             for (int y = 0; y < 8; y++) {
@@ -107,7 +109,7 @@ void ServerChunkMap::generate(glm::vec3 chunkPos) {
                             ambientPos.y = 0.0f;
                         }
                         // if (chunkPos.x == 0.0f && chunkPos.z == 0.0f && x == 0 && z == 0) { std::cout << ambientPos.y << ", " << y << std::endl; }
-                        HeightMap::getInstance().addMap(glm::vec2(chunkPos.x, chunkPos.z), height, ambientPos);
+                        HeightMap::getInstance().addSource(glm::vec2(chunkPos.x, chunkPos.z), height, ambientPos);
                     }
                     std::shared_ptr<Block> block = std::make_shared<Block>(id, blockPos, glm::vec3(0.0f, 0.0f, 0.0f), (id == 0 ? false : true), glm::vec3(0.5f, 0.5f, 0.5f));
                     addBlock(blockPos, block);
@@ -166,207 +168,96 @@ void ServerChunkMap::resetLights() {
     }
 }
 
-std::set<glm::vec3, vec3Comparator> ServerChunkMap::checkLights(glm::vec3 chunkPos, Block prevblock) {
-    std::map<std::pair<glm::vec3, glm::vec3>, int, vec3PairComparator> lightResult;
+std::set<glm::vec3, vec3Comparator> ServerChunkMap::simulateLightSource(glm::vec3 chunkPos, Block source, bool collision, int setarrays) {
     std::set<glm::vec3, vec3Comparator> affectedChunks;
     affectedChunks.insert(chunkPos);
-    // int ch = 0;
+
+    int lightIntensity = 6;
+    std::map<AbsPos, int, vec3PairComparator> lightQueue;
+    lightQueue[std::make_pair(chunkPos, source.position)] = lightIntensity;
+
+    while (!lightQueue.empty() && lightIntensity > 1) {
+        std::map<AbsPos, int, vec3PairComparator> tempQueue;
+        for (auto& l : lightQueue) {
+            for (int side = 0; side < 6; side++) {
+                int direction[6] = {0, 0, 0, 0, 0, 0};
+                direction[side] = 1;
+                {
+                    glm::vec3 lightPos = glm::vec3(l.first.second.x + (float)direction[0] - (float)direction[1], l.first.second.y + (float)direction[2] - (float)direction[3], l.first.second.z + (float)direction[4] - (float)direction[5]);
+                    glm::vec3 lightChunk = l.first.first;
+                    std::shared_ptr<Block> block = nullptr;
+                    bool swappedChunk = false;
+                    if (lightPos.x < 0.0f) { lightPos.x = 7.0f; lightChunk.x -= 1.0f; swappedChunk = true; }
+                    if (lightPos.x > 7.0f) { lightPos.x = 0.0f; lightChunk.x += 1.0f; swappedChunk = true; }
+                    if (lightPos.y < 0.0f) { lightPos.y = 7.0f; lightChunk.y -= 1.0f; swappedChunk = true; }
+                    if (lightPos.y > 7.0f) { lightPos.y = 0.0f; lightChunk.y += 1.0f; swappedChunk = true; }
+                    if (lightPos.z < 0.0f) { lightPos.z = 7.0f; lightChunk.z -= 1.0f; swappedChunk = true; }
+                    if (lightPos.z > 7.0f) { lightPos.z = 0.0f; lightChunk.z += 1.0f; swappedChunk = true; }
+
+                    if (swappedChunk && Server::getInstance().chunks.count(lightChunk)) {
+                        block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
+                        affectedChunks.insert(lightChunk);
+                        if (setarrays != NONE) {
+                            if (setarrays == ADD) { Server::getInstance().chunks[lightChunk]->lightSources[std::make_pair(chunkPos, source.position)] = 5; }
+                            else if (setarrays == REMOVE) { Server::getInstance().chunks[lightChunk]->lightSources.erase(std::make_pair(chunkPos, source.position)); }
+                        }
+                    }
+                    if (!swappedChunk) {
+                        block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
+                    }
+                    if (block != nullptr && (block->id == 0 || !collision)) {
+                        std::pair<glm::vec3, glm::vec3> lightBlock = std::make_pair(lightChunk, lightPos);
+                        tempQueue[lightBlock] = lightIntensity - 1;
+                    }
+                }
+            }
+        }
+        lightIntensity -= 1;
+        lightQueue = tempQueue;
+    }
+    return affectedChunks;
+}
+
+void ServerChunkMap::checkLights(glm::vec3 chunkPos) {
+    std::map<AbsPos, int, vec3PairComparator> lightResult;
 
     int lightIntensity = 5;
-    std::map<std::pair<glm::vec3, glm::vec3>, int, vec3PairComparator> lightQueue;
-    std::array<std::shared_ptr<Block>, 512> blockMap = blocks;
-    int index = 0;
-    for (auto& b : blockMap) {
-        // ch++;
-        // std::cout << ch << " ch" << std::endl;
-        // std::cout << b.second->id << " id" << std::endl;
-        // printf("%f %f %f block\n", b.first.x, b.first.y, b.first.z);
-        // if (b.second == nullptr) { continue; }
-        if (b->id == 5) {
-            glm::vec3 blockPos = b->position;
-            lightQueue[std::make_pair(chunkPos, blockPos)] = lightIntensity;
-            // printf("%f %f %f start\n", b.first.x, b.first.y, b.first.z);
-        }
-        if (b->position == prevblock.position && prevblock.id == 5) {
-            glm::vec3 blockPos = b->position;
-            lightQueue[std::make_pair(chunkPos, blockPos)] = -1;
-            // printf("%f %f %f start\n", b.first.x, b.first.y, b.first.z);
-        }
+    std::map<AbsPos, int, vec3PairComparator> lightQueue;
+
+    for (auto& l : lightSources) {
+        lightQueue[l.first] = l.second;
     }
 
     while (!lightQueue.empty() && lightIntensity > 1) {
-        // std::cout << lightQueue.size() << std::endl;
-        std::map<std::pair<glm::vec3, glm::vec3>, int, vec3PairComparator> tempQueue;
+        std::map<AbsPos, int, vec3PairComparator> tempQueue;
         for (auto& l : lightQueue) {
-            // x
-            // printf("%f %f %f chunk\n", l.first.first.x, l.first.first.y, l.first.first.z);
-            // printf("%f %f %f block\n", l.first.second.x, l.first.second.y, l.first.second.z);
-            // if (l.first.first.x == 0.0f && l.first.first.y == 0.0f && l.first.first.z == -1.0f) {
-            //     printf("%f %f %f chunk %f %f %f block %d lvl\n", l.first.first.x, l.first.first.y, l.first.first.z, l.first.second.x, l.first.second.y, l.first.second.z, l.second);
-            // }
-            {
-                float x = l.first.second.x - 1.0f;
-                glm::vec3 lightPos = glm::vec3(x, l.first.second.y, l.first.second.z);
-                glm::vec3 lightChunk = l.first.first;
-                std::shared_ptr<Block> block = nullptr;
-                if (x < 0.0f) {
-                    x = 7.0f;
-                    if (Server::getInstance().chunks.count(glm::vec3(lightChunk.x - 1.0f, lightChunk.y, lightChunk.z)) && checkValidPos(glm::vec3(x, l.first.second.y, l.first.second.z))) {
-                        lightPos = glm::vec3(x, l.first.second.y, l.first.second.z);
-                        lightChunk = glm::vec3(lightChunk.x - 1.0f, lightChunk.y, lightChunk.z);
+            for (int side = 0; side < 6; side++) {
+                int direction[6] = {0, 0, 0, 0, 0, 0};
+                direction[side] = 1;
+                {
+                    glm::vec3 lightPos = glm::vec3(l.first.second.x + (float)direction[0] - (float)direction[1], l.first.second.y + (float)direction[2] - (float)direction[3], l.first.second.z + (float)direction[4] - (float)direction[5]);
+                    glm::vec3 lightChunk = l.first.first;
+                    std::shared_ptr<Block> block = nullptr;
+                    bool swappedChunk = false;
+                    if (lightPos.x < 0.0f) { lightPos.x = 7.0f; lightChunk.x -= 1.0f; swappedChunk = true; }
+                    if (lightPos.x > 7.0f) { lightPos.x = 0.0f; lightChunk.x += 1.0f; swappedChunk = true; }
+                    if (lightPos.y < 0.0f) { lightPos.y = 7.0f; lightChunk.y -= 1.0f; swappedChunk = true; }
+                    if (lightPos.y > 7.0f) { lightPos.y = 0.0f; lightChunk.y += 1.0f; swappedChunk = true; }
+                    if (lightPos.z < 0.0f) { lightPos.z = 7.0f; lightChunk.z -= 1.0f; swappedChunk = true; }
+                    if (lightPos.z > 7.0f) { lightPos.z = 0.0f; lightChunk.z += 1.0f; swappedChunk = true; }
+
+                    if (swappedChunk && Server::getInstance().chunks.count(lightChunk)) {
                         block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
                     }
-                }
-                // if ((l.first.first.x == 0.0f && l.first.first.y == 0.0f && l.first.first.z == -1.0f) && !checkValidPos(glm::vec3(lightPos.x, lightPos.y, lightPos.z))) {
-                //     printf("%f %f %f block\n", l.first.second.x, l.first.second.y, l.first.second.z);
-                // }
-                else if (checkValidPos(glm::vec3(lightPos.x, lightPos.y, lightPos.z))) {
-                    block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
-                }
-                if (block != nullptr && block->id == 0) {
-                    std::pair<glm::vec3, glm::vec3> lightBlock = std::make_pair(lightChunk, lightPos);
-                    if (!tempQueue.count(lightBlock)) {
-                        tempQueue[lightBlock] = (l.second == -1 ? -1 : lightIntensity - 1);
-                    }
-                    if (!lightResult.count(lightBlock) || lightResult[lightBlock] < lightIntensity - 1) {
-                        lightResult[lightBlock] = (l.second == -1 ? -1 : lightIntensity - 1);
-                    }
-                }
-            }
-            {
-                float x = l.first.second.x + 1.0f;
-                glm::vec3 lightPos = glm::vec3(x, l.first.second.y, l.first.second.z);
-                glm::vec3 lightChunk = l.first.first;
-                std::shared_ptr<Block> block = nullptr;
-                if (x > 7.0f) {
-                    x = 0.0f;
-                    if (Server::getInstance().chunks.count(glm::vec3(lightChunk.x + 1.0f, lightChunk.y, lightChunk.z)) && checkValidPos(glm::vec3(x, l.first.second.y, l.first.second.z))) {
-                        lightPos = glm::vec3(x, l.first.second.y, l.first.second.z);
-                        lightChunk = glm::vec3(lightChunk.x + 1.0f, lightChunk.y, lightChunk.z);
+                    if (!swappedChunk) {
                         block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
                     }
-                }
-                else if (checkValidPos(glm::vec3(lightPos.x, lightPos.y, lightPos.z))) {
-                    block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
-                }
-                if (block != nullptr && block->id == 0) {
-                    std::pair<glm::vec3, glm::vec3> lightBlock = std::make_pair(lightChunk, lightPos);
-                    if (!tempQueue.count(lightBlock)) {
-                        tempQueue[lightBlock] = (l.second == -1 ? -1 : lightIntensity - 1);
-                    }
-                    if (!lightResult.count(lightBlock) || lightResult[lightBlock] < lightIntensity - 1) {
-                        lightResult[lightBlock] = (l.second == -1 ? -1 : lightIntensity - 1);
-                    }
-                }
-            }
-            // y
-            {
-                float y = l.first.second.y - 1.0f;
-                glm::vec3 lightPos = glm::vec3(l.first.second.x, y, l.first.second.z);
-                glm::vec3 lightChunk = l.first.first;
-                std::shared_ptr<Block> block = nullptr;
-                if (y < 0.0f) {
-                    y = 7.0f;
-                    if (Server::getInstance().chunks.count(glm::vec3(lightChunk.x, lightChunk.y - 1.0f, lightChunk.z)) && checkValidPos(glm::vec3(l.first.second.x, y, l.first.second.z))) {
-                        lightPos = glm::vec3(l.first.second.x, y, l.first.second.z);
-                        lightChunk = glm::vec3(lightChunk.x, lightChunk.y - 1.0f, lightChunk.z);
-                        block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
-                    }
-                }
-                else if (checkValidPos(glm::vec3(lightPos.x, lightPos.y, lightPos.z))) {
-                    block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
-                }
-                if (block != nullptr && block->id == 0) {
-                    std::pair<glm::vec3, glm::vec3> lightBlock = std::make_pair(lightChunk, lightPos);
-                    if (!tempQueue.count(lightBlock)) {
-                        tempQueue[lightBlock] = (l.second == -1 ? -1 : lightIntensity - 1);
-                    }
-                    if (!lightResult.count(lightBlock) || lightResult[lightBlock] < lightIntensity - 1) {
-                        lightResult[lightBlock] = (l.second == -1 ? -1 : lightIntensity - 1);
-                    }
-                }
-            }
-            {
-                float y = l.first.second.y + 1.0f;
-                glm::vec3 lightPos = glm::vec3(l.first.second.x, y, l.first.second.z);
-                glm::vec3 lightChunk = l.first.first;
-                std::shared_ptr<Block> block = nullptr;
-                if (y > 7.0f) {
-                    y = 0.0f;
-                    if (Server::getInstance().chunks.count(glm::vec3(lightChunk.x, lightChunk.y + 1.0f, lightChunk.z)) && checkValidPos(glm::vec3(l.first.second.x, y, l.first.second.z))) {
-                        lightPos = glm::vec3(l.first.second.x, y, l.first.second.z);
-                        lightChunk = glm::vec3(lightChunk.x, lightChunk.y + 1.0f, lightChunk.z);
-                        block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
-                    }
-                }
-                else if (checkValidPos(glm::vec3(lightPos.x, lightPos.y, lightPos.z))) {
-                    block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
-                }
-                if (block != nullptr && block->id == 0) {
-                    std::pair<glm::vec3, glm::vec3> lightBlock = std::make_pair(lightChunk, lightPos);
-                    if (!tempQueue.count(lightBlock)) {
-                        tempQueue[lightBlock] = (l.second == -1 ? -1 : lightIntensity - 1);
-                    }
-                    if (!lightResult.count(lightBlock) || lightResult[lightBlock] < lightIntensity - 1) {
-                        lightResult[lightBlock] = (l.second == -1 ? -1 : lightIntensity - 1);
-                    }
-                }
-            }
-            // z
-            {
-                float z = l.first.second.z - 1.0f;
-                glm::vec3 lightPos = glm::vec3(l.first.second.x, l.first.second.y, z);
-                glm::vec3 lightChunk = l.first.first;
-                std::shared_ptr<Block> block = nullptr;
-                if (z < 0.0f) {
-                    z = 7.0f;
-                    if (Server::getInstance().chunks.count(glm::vec3(lightChunk.x, lightChunk.y, lightChunk.z - 1.0f)) && checkValidPos(glm::vec3(l.first.second.x, l.first.second.y, z))) {
-                        lightPos = glm::vec3(l.first.second.x, l.first.second.y, z);
-                        lightChunk = glm::vec3(lightChunk.x, lightChunk.y, lightChunk.z - 1.0f);
-                        block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
-                    }
-                }
-                else if (checkValidPos(glm::vec3(lightPos.x, lightPos.y, lightPos.z))) {
-                    block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
-                }
-                // if (l.first.first.x == 0.0f && l.first.first.y == 0.0f && l.first.first.z == -1.0f) {
-                //     printf("%f %f %f chunk %f %f %f block %d lvl ZZZ\n", lightChunk.x, lightChunk.y, lightChunk.z, lightPos.x, lightPos.y, lightPos.z, l.second);
-                //     printf("%d test1\n", (int)(block != nullptr));
-                //     printf("%d test2\n", (int)(block->id == 0));
-                // }
-                if (block != nullptr && block->id == 0) {
-                    std::pair<glm::vec3, glm::vec3> lightBlock = std::make_pair(lightChunk, lightPos);
-                    if (!tempQueue.count(lightBlock)) {
-                        tempQueue[lightBlock] = (l.second == -1 ? -1 : lightIntensity - 1);
-                    }
-                    if (!lightResult.count(lightBlock) || lightResult[lightBlock] < lightIntensity - 1) {
-                        lightResult[lightBlock] = (l.second == -1 ? -1 : lightIntensity - 1);
-                    }
-                }
-            }
-            {
-                float z = l.first.second.z + 1.0f;
-                glm::vec3 lightPos = glm::vec3(l.first.second.x, l.first.second.y, z);
-                glm::vec3 lightChunk = l.first.first;
-                std::shared_ptr<Block> block = nullptr;
-                if (z > 7.0f) {
-                    z = 0.0f;
-                    if (Server::getInstance().chunks.count(glm::vec3(lightChunk.x, lightChunk.y, lightChunk.z + 1.0f)) && checkValidPos(glm::vec3(l.first.second.x, l.first.second.y, z))) {
-                        lightPos = glm::vec3(l.first.second.x, l.first.second.y, z);
-                        lightChunk = glm::vec3(lightChunk.x, lightChunk.y, lightChunk.z + 1.0f);
-                        block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
-                    }
-                }
-                else if (checkValidPos(glm::vec3(lightPos.x, lightPos.y, lightPos.z))) {
-                    block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
-                }
-                if (block != nullptr && block->id == 0) {
-                    std::pair<glm::vec3, glm::vec3> lightBlock = std::make_pair(lightChunk, lightPos);
-                    if (!tempQueue.count(lightBlock)) {
-                        tempQueue[lightBlock] = (l.second == -1 ? -1 : lightIntensity - 1);
-                    }
-                    if (!lightResult.count(lightBlock) || lightResult[lightBlock] < lightIntensity - 1) {
-                        lightResult[lightBlock] = (l.second == -1 ? -1 : lightIntensity - 1);
+                    if (block != nullptr && block->id == 0) {
+                        std::pair<glm::vec3, glm::vec3> lightBlock = std::make_pair(lightChunk, lightPos);
+                        if (!lightResult.count(lightBlock) || lightResult[lightBlock] < lightIntensity - 1) {
+                            tempQueue[lightBlock] = lightIntensity - 1;
+                            lightResult[lightBlock] = lightIntensity - 1;
+                        }
                     }
                 }
             }
@@ -375,175 +266,36 @@ std::set<glm::vec3, vec3Comparator> ServerChunkMap::checkLights(glm::vec3 chunkP
         lightQueue = tempQueue;
     }
 
-    // std::cout << "lightresult" << std::endl;
-    // std::cout << lightResult.size() << std::endl;
-    for (auto& r : lightResult) {
-        // EditChunkServer packet;
-        // packet.id = 1;
-        // packet.chunkpos = r.first.first;
-        // packet.blockpos = r.first.second;
-        // for (auto& s : Server::getInstance().clients) {
-        //     Server::getInstance().sendPacket(s.first, &packet);
-        // }
-        // x
-        // if (r.first.first.x == 0.0f && r.first.first.z == -1.0f) {
-        //     printf("%f %f %f block %d guh\n", r.first.second.x, r.first.second.y, r.first.second.z, r.second);
-        // }
-        // printf("%f %f %f\n", r.first.second.x, r.first.second.y, r.first.second.z);
-        // printf("%d light\n", r.second);
-        {
-            glm::vec3 resultChunk = r.first.first;
-            glm::vec3 resultBlock = glm::vec3(r.first.second.x - 1.0f, r.first.second.y, r.first.second.z);
-            if (resultBlock.x < 0.0f) {
-                resultBlock.x = 7.0f;
-                resultChunk.x -= 1.0f;
-            }
-            std::shared_ptr<Block> block = nullptr;
-            if (checkValidPos(resultBlock)) {
-                block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
-            }
-            if (block != nullptr && block->id != 0) {
-                // std::cout << "front" << std::endl;
-                std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
-                if (block->lightLevels[3].x < r.second) {
-                    affectedChunks.insert(resultChunk);
-                    block->lightLevels[3].x = r.second;
+    for (auto& l : lightResult) {
+        for (int side = 0; side < 6; side++) {
+            int direction[6] = {0, 0, 0, 0, 0, 0};
+            int blockside[6] = {2, 3, 4, 5, 0, 1};
+            direction[side] = 1;
+            {
+                glm::vec3 lightPos = glm::vec3(l.first.second.x + (float)direction[0] - (float)direction[1], l.first.second.y + (float)direction[2] - (float)direction[3], l.first.second.z + (float)direction[4] - (float)direction[5]);
+                glm::vec3 lightChunk = l.first.first;
+                std::shared_ptr<Block> block = nullptr;
+
+                if (lightPos.x < 0.0f) { lightPos.x = 7.0f; lightChunk.x -= 1.0f; }
+                if (lightPos.x > 7.0f) { lightPos.x = 0.0f; lightChunk.x += 1.0f; }
+                if (lightPos.y < 0.0f) { lightPos.y = 7.0f; lightChunk.y -= 1.0f; }
+                if (lightPos.y > 7.0f) { lightPos.y = 0.0f; lightChunk.y += 1.0f; }
+                if (lightPos.z < 0.0f) { lightPos.z = 7.0f; lightChunk.z -= 1.0f; }
+                if (lightPos.z > 7.0f) { lightPos.z = 0.0f; lightChunk.z += 1.0f; }
+
+                if (chunkPos == lightChunk && checkValidPos(lightPos)) {
+                    block = getBlock(lightPos);
                 }
-                else if (r.second < 0) {
-                    affectedChunks.insert(resultChunk);
-                    block->lightLevels[3].x = 0;
-                }
-            }
-        }
-        {
-            glm::vec3 resultChunk = r.first.first;
-            glm::vec3 resultBlock = glm::vec3(r.first.second.x + 1.0f, r.first.second.y, r.first.second.z);
-            if (resultBlock.x > 7.0f) {
-                resultBlock.x = 0.0f;
-                resultChunk.x += 1.0f;
-            }
-            std::shared_ptr<Block> block = nullptr;
-            if (checkValidPos(resultBlock)) {
-                block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
-            }
-            if (block != nullptr && block->id != 0) {
-                // std::cout << "back" << std::endl;
-                std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
-                if (block->lightLevels[2].x < r.second) {
-                    affectedChunks.insert(resultChunk);
-                    block->lightLevels[2].x = r.second;
-                }
-                else if (r.second < 0) {
-                    affectedChunks.insert(resultChunk);
-                    block->lightLevels[2].x = 0;
-                }
-            }
-        }
-        // y
-        {
-            glm::vec3 resultChunk = r.first.first;
-            glm::vec3 resultBlock = glm::vec3(r.first.second.x, r.first.second.y - 1.0f, r.first.second.z);
-            if (resultBlock.y < 0.0f) {
-                resultBlock.y = 7.0f;
-                resultChunk.y -= 1.0f;
-            }
-            std::shared_ptr<Block> block = nullptr;
-            if (checkValidPos(resultBlock)) {
-                block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
-            }
-            if (block != nullptr && block->id != 0) {
-                // std::cout << "top" << std::endl;
-                std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
-                if (block->lightLevels[5].x < r.second) {
-                    affectedChunks.insert(resultChunk);
-                    block->lightLevels[5].x = r.second;
-                }
-                else if (r.second < 0) {
-                    affectedChunks.insert(resultChunk);
-                    block->lightLevels[5].x = 0;
-                }
-            }
-        }
-        {
-            glm::vec3 resultChunk = r.first.first;
-            glm::vec3 resultBlock = glm::vec3(r.first.second.x, r.first.second.y + 1.0f, r.first.second.z);
-            if (resultBlock.y > 7.0f) {
-                resultBlock.y = 0.0f;
-                resultChunk.y += 1.0f;
-            }
-            std::shared_ptr<Block> block = nullptr;
-            if (checkValidPos(resultBlock)) {
-                block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
-            }
-            if (block != nullptr && block->id != 0) {
-                // std::cout << "bottom" << std::endl;
-                std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
-                if (block->lightLevels[4].x < r.second) {
-                    affectedChunks.insert(resultChunk);
-                    block->lightLevels[4].x = r.second;
-                }
-                else if (r.second < 0) {
-                    affectedChunks.insert(resultChunk);
-                    block->lightLevels[4].x = 0;
-                }
-            }
-        }
-        // z
-        {
-            glm::vec3 resultChunk = r.first.first;
-            glm::vec3 resultBlock = glm::vec3(r.first.second.x, r.first.second.y, r.first.second.z - 1.0f);
-            if (resultBlock.z < 0.0f) {
-                resultBlock.z = 7.0f;
-                resultChunk.z -= 1.0f;
-            }
-            std::shared_ptr<Block> block = nullptr;
-            if (checkValidPos(resultBlock)) {
-                block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
-            }
-            if (block != nullptr && block->id != 0 && (block->lightLevels[1].x < r.second)) {
-                // std::cout << "right" << std::endl;
-                std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
-                if (block->lightLevels[1].x < r.second) {
-                    affectedChunks.insert(resultChunk);
-                    block->lightLevels[1].x = r.second;
-                }
-                else if (r.second < 0) {
-                    affectedChunks.insert(resultChunk);
-                    block->lightLevels[1].x = 0;
-                }
-            }
-        }
-        {
-            glm::vec3 resultChunk = r.first.first;
-            glm::vec3 resultBlock = glm::vec3(r.first.second.x, r.first.second.y, r.first.second.z + 1.0f);
-            if (resultBlock.z > 7.0f) {
-                resultBlock.z = 0.0f;
-                resultChunk.z += 1.0f;
-            }
-            std::shared_ptr<Block> block = nullptr;
-            if (checkValidPos(resultBlock)) {
-                block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
-            }
-            if (block != nullptr && block->id != 0 && (block->lightLevels[0].x < r.second)) {
-                // std::cout << "left" << std::endl;
-                std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
-                if (block->lightLevels[0].x < r.second) {
-                    affectedChunks.insert(resultChunk);
-                    block->lightLevels[0].x = r.second;
-                }
-                else if (r.second < 0) {
-                    affectedChunks.insert(resultChunk);
-                    block->lightLevels[0].x = 0;
+
+                if (block != nullptr && block->id != 0) {
+                    block->lightLevels[blockside[side]].x = l.second;
                 }
             }
         }
     }
-
-    return affectedChunks;
 }
 
 void ServerChunkMap::resetAmbient() {
-    std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
     for (auto& b : blocks) {
         // printf("%f %f %f block\n", b.first.x, b.first.y, b.first.z);
         if (b->id != 0) {
@@ -554,467 +306,186 @@ void ServerChunkMap::resetAmbient() {
     }
 }
 
-std::set<glm::vec3, vec3Comparator> ServerChunkMap::checkAmbient(glm::vec3 chunkPos) {
-    std::map<std::pair<glm::vec3, glm::vec3>, int, vec3PairComparator> darkResult;
+std::set<glm::vec3, vec3Comparator> ServerChunkMap::simulateAmbientSource(glm::vec3 chunkPos, AbsPos source, bool collision, int setarrays) {
     std::set<glm::vec3, vec3Comparator> affectedChunks;
     affectedChunks.insert(chunkPos);
-    // int ch = 0;
 
-    std::map<std::pair<glm::vec3, glm::vec3>, int, vec3PairComparator> darknessQueue;
-    for (auto& a : HeightMap::getInstance().heightMaps[glm::vec2(chunkPos.x, chunkPos.z)]) {
-        if (a.first == chunkPos.y) {
-            darknessQueue[std::pair(glm::vec3(chunkPos.x, a.first, chunkPos.z), glm::vec3(a.second.x, a.second.y, a.second.z))] = 0;
-            darkResult[std::pair(glm::vec3(chunkPos.x, a.first, chunkPos.z), glm::vec3(a.second.x, a.second.y, a.second.z))] = 0;
-        }
-        if (a.first == chunkPos.y + 1.0f && a.second.y == 0.0f) {
-            darknessQueue[std::pair(glm::vec3(chunkPos.x, a.first, chunkPos.z), glm::vec3(a.second.x, a.second.y, a.second.z))] = 0;
-            darkResult[std::pair(glm::vec3(chunkPos.x, a.first, chunkPos.z), glm::vec3(a.second.x, a.second.y, a.second.z))] = 0;
-        }
-    }
+    int lightIntensity = 0;
+    std::map<AbsPos, int, vec3PairComparator> lightQueue;
+    lightQueue[std::make_pair(source.first, source.second)] = lightIntensity;
 
-    // ch++;
-    // std::cout << ch << " ch" << std::endl;
-    // std::cout << b.second->id << " id" << std::endl;
-    // if (b.second == nullptr) { continue; }
-    int darknessLevel = 0;
-    // if (chunkPos.x == 0.0f && chunkPos.y == 0.0f && chunkPos.z == 0.0f) {
-    //     printf("%f %f %f start\n", a.x, a.y, a.z);
-    // }
-    while (!darknessQueue.empty() && darknessLevel > -5) {
-        // std::cout << darknessQueue.size() << " dqueue" << std::endl;
-        std::map<std::pair<glm::vec3, glm::vec3>, int, vec3PairComparator> tempQueue;
-        // if (chunkPos.x == 0.0f && chunkPos.y == 0.0f && chunkPos.z == 0.0f && a.x == 0.0f && a.z == 0.0f) {
-        //     printf("start\n");
-        // }
-        for (auto& l : darknessQueue) {
-            // x
-            // printf("%f %f %f chunk\n", l.first.first.x, l.first.first.y, l.first.first.z);
-            // printf("%f %f %f block\n", l.first.second.x, l.first.second.y, l.first.second.z);
-            // if (chunkPos.x == 0.0f && chunkPos.y == 0.0f && chunkPos.z == 0.0f && l.first.x == 0.0f && l.first.z == 0.0f) {
-            //     printf("%f %f %f block %d lvl\n", l.first.x, l.first.y, l.first.z, l.second);
-            // }
-            {
-                float x = l.first.second.x - 1.0f;
-                glm::vec3 darkPos = glm::vec3(x, l.first.second.y, l.first.second.z);
-                glm::vec3 darkChunk = l.first.first;
-                std::shared_ptr<Block> block = nullptr;
-                if (x < 0.0f) {
-                    x = 7.0f;
-                    if (Server::getInstance().chunks.count(glm::vec3(darkChunk.x - 1.0f, darkChunk.y, darkChunk.z)) && checkValidPos(glm::vec3(x, l.first.second.y, l.first.second.z))) {
-                        darkPos = glm::vec3(x, l.first.second.y, l.first.second.z);
-                        darkChunk = glm::vec3(darkChunk.x - 1.0f, darkChunk.y, darkChunk.z);
-                        block = Server::getInstance().chunks[darkChunk]->getBlock(darkPos);
-                    }
-                }
-                // if ((l.first.first.x == 0.0f && l.first.first.y == 0.0f && l.first.first.z == -1.0f) && !checkValidPos(glm::vec3(lightPos.x, lightPos.y, lightPos.z))) {
-                //     printf("%f %f %f block\n", l.first.second.x, l.first.second.y, l.first.second.z);
-                // }
-                else if (checkValidPos(glm::vec3(darkPos.x, darkPos.y, darkPos.z))) {
-                    if (darkChunk == chunkPos) {
-                        block = getBlock(darkPos);
-                    }
-                    else if (Server::getInstance().chunks.count(darkChunk)) {
-                        block = Server::getInstance().chunks[darkChunk]->getBlock(darkPos);
-                    }
-                }
-                if (block != nullptr && block->id == 0 && HeightMap::getInstance().heightMaps.count(glm::vec2(darkChunk.x, darkChunk.z))) {
-                    auto it = std::find(HeightMap::getInstance().heightMaps.at(glm::vec2(darkChunk.x, darkChunk.z)).begin(), HeightMap::getInstance().heightMaps.at(glm::vec2(darkChunk.x, darkChunk.z)).end(), std::pair(darkChunk.y, darkPos));
-                    std::pair<glm::vec3, glm::vec3> darkBlock = std::make_pair(darkChunk, darkPos);
-                    if ((!darkResult.count(darkBlock) || darkResult[darkBlock] < darknessLevel - 1) && it == HeightMap::getInstance().heightMaps.at(glm::vec2(darkChunk.x, darkChunk.z)).end()) {
-                        tempQueue[darkBlock] = darknessLevel - 1;
-                        darkResult[darkBlock] = darknessLevel - 1;
-                    }
-                }
-            }
-            {
-                float x = l.first.second.x + 1.0f;
-                glm::vec3 darkPos = glm::vec3(x, l.first.second.y, l.first.second.z);
-                glm::vec3 darkChunk = l.first.first;
-                std::shared_ptr<Block> block = nullptr;
-                if (x > 7.0f) {
-                    x = 0.0f;
-                    if (Server::getInstance().chunks.count(glm::vec3(darkChunk.x + 1.0f, darkChunk.y, darkChunk.z)) && checkValidPos(glm::vec3(x, l.first.second.y, l.first.second.z))) {
-                        darkPos = glm::vec3(x, l.first.second.y, l.first.second.z);
-                        darkChunk = glm::vec3(darkChunk.x + 1.0f, darkChunk.y, darkChunk.z);
-                        block = Server::getInstance().chunks[darkChunk]->getBlock(darkPos);
-                    }
-                }
-                // if ((l.first.first.x == 0.0f && l.first.first.y == 0.0f && l.first.first.z == -1.0f) && !checkValidPos(glm::vec3(lightPos.x, lightPos.y, lightPos.z))) {
-                //     printf("%f %f %f block\n", l.first.second.x, l.first.second.y, l.first.second.z);
-                // }
-                else if (checkValidPos(glm::vec3(darkPos.x, darkPos.y, darkPos.z))) {
-                    if (darkChunk == chunkPos) {
-                        block = getBlock(darkPos);
-                    }
-                    else if (Server::getInstance().chunks.count(darkChunk)) {
-                        block = Server::getInstance().chunks[darkChunk]->getBlock(darkPos);
-                    }
-                }
-                if (block != nullptr && block->id == 0 && HeightMap::getInstance().heightMaps.count(glm::vec2(darkChunk.x, darkChunk.z))) {
-                    auto it = std::find(HeightMap::getInstance().heightMaps.at(glm::vec2(darkChunk.x, darkChunk.z)).begin(), HeightMap::getInstance().heightMaps.at(glm::vec2(darkChunk.x, darkChunk.z)).end(), std::pair(darkChunk.y, darkPos));
-                    std::pair<glm::vec3, glm::vec3> darkBlock = std::make_pair(darkChunk, darkPos);
-                    if ((!darkResult.count(darkBlock) || darkResult[darkBlock] < darknessLevel - 1) && it == HeightMap::getInstance().heightMaps.at(glm::vec2(darkChunk.x, darkChunk.z)).end()) {
-                        tempQueue[darkBlock] = darknessLevel - 1;
-                        darkResult[darkBlock] = darknessLevel - 1;
-                    }
-                }
-            }
-            // y
-            {
-                float y = l.first.second.y - 1.0f;
-                glm::vec3 darkPos = glm::vec3(l.first.second.x, y, l.first.second.z);
-                glm::vec3 darkChunk = l.first.first;
-                std::shared_ptr<Block> block = nullptr;
-                if (y < 0.0f) {
-                    y = 7.0f;
-                    if (Server::getInstance().chunks.count(glm::vec3(darkChunk.x, darkChunk.y - 1.0f, darkChunk.z)) && checkValidPos(glm::vec3(l.first.second.x, y, l.first.second.z))) {
-                        darkPos = glm::vec3(l.first.second.x, y, l.first.second.z);
-                        darkChunk = glm::vec3(darkChunk.x, darkChunk.y - 1.0f, darkChunk.z);
-                        block = Server::getInstance().chunks[darkChunk]->getBlock(darkPos);
-                    }
-                }
-                // if ((l.first.first.x == 0.0f && l.first.first.y == 0.0f && l.first.first.z == -1.0f) && !checkValidPos(glm::vec3(lightPos.x, lightPos.y, lightPos.z))) {
-                //     printf("%f %f %f block\n", l.first.second.x, l.first.second.y, l.first.second.z);
-                // }
-                else if (checkValidPos(glm::vec3(darkPos.x, darkPos.y, darkPos.z))) {
-                    if (darkChunk == chunkPos) {
-                        block = getBlock(darkPos);
-                    }
-                    else if (Server::getInstance().chunks.count(darkChunk)) {
-                        block = Server::getInstance().chunks[darkChunk]->getBlock(darkPos);
-                    }
-                }
-                if (block != nullptr && block->id == 0 && HeightMap::getInstance().heightMaps.count(glm::vec2(darkChunk.x, darkChunk.z))) {
-                    auto it = std::find(HeightMap::getInstance().heightMaps.at(glm::vec2(darkChunk.x, darkChunk.z)).begin(), HeightMap::getInstance().heightMaps.at(glm::vec2(darkChunk.x, darkChunk.z)).end(), std::pair(darkChunk.y, darkPos));
-                    std::pair<glm::vec3, glm::vec3> darkBlock = std::make_pair(darkChunk, darkPos);
-                    if ((!darkResult.count(darkBlock) || darkResult[darkBlock] < darknessLevel - 1) && it == HeightMap::getInstance().heightMaps.at(glm::vec2(darkChunk.x, darkChunk.z)).end()) {
-                        tempQueue[darkBlock] = darknessLevel - 1;
-                        darkResult[darkBlock] = darknessLevel - 1;
-                    }
-                }
-            }
-            {
-                float y = l.first.second.y + 1.0f;
-                glm::vec3 darkPos = glm::vec3(l.first.second.x, y, l.first.second.z);
-                glm::vec3 darkChunk = l.first.first;
-                std::shared_ptr<Block> block = nullptr;
-                if (y > 7.0f) {
-                    y = 0.0f;
-                    if (Server::getInstance().chunks.count(glm::vec3(darkChunk.x, darkChunk.y + 1.0f, darkChunk.z)) && checkValidPos(glm::vec3(l.first.second.x, y, l.first.second.z))) {
-                        darkPos = glm::vec3(l.first.second.x, y, l.first.second.z);
-                        darkChunk = glm::vec3(darkChunk.x, darkChunk.y + 1.0f, darkChunk.z);
-                        block = Server::getInstance().chunks[darkChunk]->getBlock(darkPos);
-                    }
-                }
-                // if ((l.first.first.x == 0.0f && l.first.first.y == 0.0f && l.first.first.z == -1.0f) && !checkValidPos(glm::vec3(lightPos.x, lightPos.y, lightPos.z))) {
-                //     printf("%f %f %f block\n", l.first.second.x, l.first.second.y, l.first.second.z);
-                // }
-                else if (checkValidPos(glm::vec3(darkPos.x, darkPos.y, darkPos.z))) {
-                    if (darkChunk == chunkPos) {
-                        block = getBlock(darkPos);
-                    }
-                    else if (Server::getInstance().chunks.count(darkChunk)) {
-                        block = Server::getInstance().chunks[darkChunk]->getBlock(darkPos);
-                    }
-                }
-                if (block != nullptr && block->id == 0 && HeightMap::getInstance().heightMaps.count(glm::vec2(darkChunk.x, darkChunk.z))) {
-                    auto it = std::find(HeightMap::getInstance().heightMaps.at(glm::vec2(darkChunk.x, darkChunk.z)).begin(), HeightMap::getInstance().heightMaps.at(glm::vec2(darkChunk.x, darkChunk.z)).end(), std::pair(darkChunk.y, darkPos));
-                    std::pair<glm::vec3, glm::vec3> darkBlock = std::make_pair(darkChunk, darkPos);
-                    if ((!darkResult.count(darkBlock) || darkResult[darkBlock] < darknessLevel - 1) && it == HeightMap::getInstance().heightMaps.at(glm::vec2(darkChunk.x, darkChunk.z)).end()) {
-                        tempQueue[darkBlock] = darknessLevel - 1;
-                        darkResult[darkBlock] = darknessLevel - 1;
-                    }
-                }
-            }
-            // z
-            {
-                float z = l.first.second.z - 1.0f;
-                glm::vec3 darkPos = glm::vec3(l.first.second.x, l.first.second.y, z);
-                glm::vec3 darkChunk = l.first.first;
-                std::shared_ptr<Block> block = nullptr;
-                if (z < 0.0f) {
-                    z = 7.0f;
-                    if (Server::getInstance().chunks.count(glm::vec3(darkChunk.x, darkChunk.y, darkChunk.z - 1.0f)) && checkValidPos(glm::vec3(l.first.second.x, l.first.second.y, z))) {
-                        darkPos = glm::vec3(l.first.second.x, l.first.second.y, z);
-                        darkChunk = glm::vec3(darkChunk.x, darkChunk.y, darkChunk.z - 1.0f);
-                        block = Server::getInstance().chunks[darkChunk]->getBlock(darkPos);
-                    }
-                }
-                // if ((l.first.first.x == 0.0f && l.first.first.y == 0.0f && l.first.first.z == -1.0f) && !checkValidPos(glm::vec3(lightPos.x, lightPos.y, lightPos.z))) {
-                //     printf("%f %f %f block\n", l.first.second.x, l.first.second.y, l.first.second.z);
-                // }
-                else if (checkValidPos(glm::vec3(darkPos.x, darkPos.y, darkPos.z))) {
-                    if (darkChunk == chunkPos) {
-                        block = getBlock(darkPos);
-                    }
-                    else if (Server::getInstance().chunks.count(darkChunk)) {
-                        block = Server::getInstance().chunks[darkChunk]->getBlock(darkPos);
-                    }
-                }
-                if (block != nullptr && block->id == 0 && HeightMap::getInstance().heightMaps.count(glm::vec2(darkChunk.x, darkChunk.z))) {
-                    auto it = std::find(HeightMap::getInstance().heightMaps.at(glm::vec2(darkChunk.x, darkChunk.z)).begin(), HeightMap::getInstance().heightMaps.at(glm::vec2(darkChunk.x, darkChunk.z)).end(), std::pair(darkChunk.y, darkPos));
-                    std::pair<glm::vec3, glm::vec3> darkBlock = std::make_pair(darkChunk, darkPos);
-                    if ((!darkResult.count(darkBlock) || darkResult[darkBlock] < darknessLevel - 1) && it == HeightMap::getInstance().heightMaps.at(glm::vec2(darkChunk.x, darkChunk.z)).end()) {
-                        tempQueue[darkBlock] = darknessLevel - 1;
-                        darkResult[darkBlock] = darknessLevel - 1;
-                    }
-                }
-            }
-            {
-                float z = l.first.second.z + 1.0f;
-                glm::vec3 darkPos = glm::vec3(l.first.second.x, l.first.second.y, z);
-                glm::vec3 darkChunk = l.first.first;
-                std::shared_ptr<Block> block = nullptr;
-                if (z > 7.0f) {
-                    z = 0.0f;
-                    if (Server::getInstance().chunks.count(glm::vec3(darkChunk.x, darkChunk.y, darkChunk.z + 1.0f)) && checkValidPos(glm::vec3(l.first.second.x, l.first.second.y, z))) {
-                        darkPos = glm::vec3(l.first.second.x, l.first.second.y, z);
-                        darkChunk = glm::vec3(darkChunk.x, darkChunk.y, darkChunk.z + 1.0f);
-                        block = Server::getInstance().chunks[darkChunk]->getBlock(darkPos);
-                    }
-                }
-                // if ((l.first.first.x == 0.0f && l.first.first.y == 0.0f && l.first.first.z == -1.0f) && !checkValidPos(glm::vec3(lightPos.x, lightPos.y, lightPos.z))) {
-                //     printf("%f %f %f block\n", l.first.second.x, l.first.second.y, l.first.second.z);
-                // }
-                else if (checkValidPos(glm::vec3(darkPos.x, darkPos.y, darkPos.z))) {
-                    if (darkChunk == chunkPos) {
-                        block = getBlock(darkPos);
-                    }
-                    else if (Server::getInstance().chunks.count(darkChunk)) {
-                        block = Server::getInstance().chunks[darkChunk]->getBlock(darkPos);
-                    }
-                }
-                if (block != nullptr && block->id == 0 && HeightMap::getInstance().heightMaps.count(glm::vec2(darkChunk.x, darkChunk.z))) {
-                    auto it = std::find(HeightMap::getInstance().heightMaps.at(glm::vec2(darkChunk.x, darkChunk.z)).begin(), HeightMap::getInstance().heightMaps.at(glm::vec2(darkChunk.x, darkChunk.z)).end(), std::pair(darkChunk.y, darkPos));
-                    std::pair<glm::vec3, glm::vec3> darkBlock = std::make_pair(darkChunk, darkPos);
-                    if ((!darkResult.count(darkBlock) || darkResult[darkBlock] < darknessLevel - 1) && it == HeightMap::getInstance().heightMaps.at(glm::vec2(darkChunk.x, darkChunk.z)).end()) {
-                        tempQueue[darkBlock] = darknessLevel - 1;
-                        darkResult[darkBlock] = darknessLevel - 1;
-                    }
-                }
-            }
-        }
-        darknessLevel -= 1;
-        darknessQueue = tempQueue;
-    }
+    while (!lightQueue.empty() && lightIntensity > -6) {
+        std::map<AbsPos, int, vec3PairComparator> tempQueue;
+        for (auto& l : lightQueue) {
+            for (int side = 0; side < 6; side++) {
+                int direction[6] = {0, 0, 0, 0, 0, 0};
+                direction[side] = 1;
+                {
+                    glm::vec3 lightPos = glm::vec3(l.first.second.x + (float)direction[0] - (float)direction[1], l.first.second.y + (float)direction[2] - (float)direction[3], l.first.second.z + (float)direction[4] - (float)direction[5]);
+                    glm::vec3 lightChunk = l.first.first;
+                    std::shared_ptr<Block> block = nullptr;
+                    bool swappedChunk = false;
+                    if (lightPos.x < 0.0f) { lightPos.x = 7.0f; lightChunk.x -= 1.0f; swappedChunk = true; }
+                    if (lightPos.x > 7.0f) { lightPos.x = 0.0f; lightChunk.x += 1.0f; swappedChunk = true; }
+                    if (lightPos.y < 0.0f) { lightPos.y = 7.0f; lightChunk.y -= 1.0f; swappedChunk = true; }
+                    if (lightPos.y > 7.0f) { lightPos.y = 0.0f; lightChunk.y += 1.0f; swappedChunk = true; }
+                    if (lightPos.z < 0.0f) { lightPos.z = 7.0f; lightChunk.z -= 1.0f; swappedChunk = true; }
+                    if (lightPos.z > 7.0f) { lightPos.z = 0.0f; lightChunk.z += 1.0f; swappedChunk = true; }
 
-    // std::cout << "kekw" << std::endl;
-    // std::cout << darkResult.size() << std::endl;
-    for (auto& r : darkResult) {
-        // x
-        // printf("%d dark\n", r.second);
-        {
-            glm::vec3 resultChunk = r.first.first;
-            glm::vec3 resultBlock = glm::vec3(r.first.second.x - 1.0f, r.first.second.y, r.first.second.z);
-            std::shared_ptr<Block> block = nullptr;
-            if (resultBlock.x < 0.0f) {
-                resultBlock.x = 7.0f;
-                resultChunk.x -= 1.0f;
-                if (Server::getInstance().chunks.count(resultChunk) && checkValidPos(resultBlock)) {
-                    block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
+                    if (swappedChunk && Server::getInstance().chunks.count(lightChunk)) {
+                        block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
+                        affectedChunks.insert(lightChunk);
+                        if (setarrays != NONE) {
+                            if (setarrays == ADD) { Server::getInstance().chunks[lightChunk]->ambientSources[std::make_pair(source.first, source.second)] = 0; }
+                            else if (setarrays == REMOVE) { Server::getInstance().chunks[lightChunk]->ambientSources.erase(std::make_pair(source.first, source.second)); }
+                        }
+                    }
+                    if (!swappedChunk) {
+                        block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
+                    }
+                    if (block != nullptr && (block->id == 0 || !collision)) {
+                        std::pair<glm::vec3, glm::vec3> lightBlock = std::make_pair(lightChunk, lightPos);
+                        tempQueue[lightBlock] = lightIntensity - 1;
+                    }
                 }
-            }
-            else if (checkValidPos(glm::vec3(resultBlock.x, resultBlock.y, resultBlock.z))) {
-                if (resultChunk == chunkPos) {
-                    block = getBlock(resultBlock);
-                }
-                else if (Server::getInstance().chunks.count(resultChunk)) {
-                    block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
-                }
-            }
-            if (block != nullptr && block->id != 0) {
-                affectedChunks.insert(resultChunk);
-            }
-            if (block != nullptr && block->id != 0 && block->lightLevels[3].y < r.second) {
-                // std::cout << "front" << std::endl;
-                std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
-                block->lightLevels[3].y = r.second;
             }
         }
-        {
-            glm::vec3 resultChunk = r.first.first;
-            glm::vec3 resultBlock = glm::vec3(r.first.second.x + 1.0f, r.first.second.y, r.first.second.z);
-            std::shared_ptr<Block> block = nullptr;
-            if (resultBlock.x > 7.0f) {
-                resultBlock.x = 0.0f;
-                resultChunk.x += 1.0f;
-                if (Server::getInstance().chunks.count(resultChunk) && checkValidPos(resultBlock)) {
-                    block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
-                }
-            }
-            else if (checkValidPos(glm::vec3(resultBlock.x, resultBlock.y, resultBlock.z))) {
-                if (resultChunk == chunkPos) {
-                    block = getBlock(resultBlock);
-                }
-                else if (Server::getInstance().chunks.count(resultChunk)) {
-                    block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
-                }
-            }
-            if (block != nullptr && block->id != 0) {
-                affectedChunks.insert(resultChunk);
-            }
-            if (block != nullptr && block->id != 0 && block->lightLevels[2].y < r.second) {
-                // std::cout << "back" << std::endl;
-                std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
-                block->lightLevels[2].y = r.second;
-            }
-        }
-        // y
-        {
-            glm::vec3 resultChunk = r.first.first;
-            glm::vec3 resultBlock = glm::vec3(r.first.second.x, r.first.second.y - 1.0f, r.first.second.z);
-            std::shared_ptr<Block> block = nullptr;
-            if (resultBlock.y < 0.0f) {
-                resultBlock.y = 7.0f;
-                resultChunk.y -= 1.0f;
-                if (Server::getInstance().chunks.count(resultChunk) && checkValidPos(resultBlock)) {
-                    block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
-                }
-            }
-            else if (checkValidPos(glm::vec3(resultBlock.x, resultBlock.y, resultBlock.z))) {
-                if (resultChunk == chunkPos) {
-                    block = getBlock(resultBlock);
-                }
-                else if (Server::getInstance().chunks.count(resultChunk)) {
-                    block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
-                }
-            }
-            // if (chunkPos.x == 0.0f && chunkPos.y == 0.0f && chunkPos.z == 0.0f && resultBlock.x == 0.0f && resultBlock.z == 0.0f) {
-            //     printf("%f %f %f block %d lvl\n", resultBlock.x, resultBlock.y, resultBlock.z, r.second);
-            //     printf("%d %d %d checks\n", (int)(block != nullptr), (int)(block->id != 0), (int)(block->lightLevels[5].y < r.second));
-            // }
-            if (block != nullptr && block->id != 0) {
-                affectedChunks.insert(resultChunk);
-            }
-            if (block != nullptr && block->id != 0 && block->lightLevels[5].y < r.second) {
-                // std::cout << "top" << std::endl;
-                std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
-                block->lightLevels[5].y = r.second;
-            }
-        }
-        {
-            glm::vec3 resultChunk = r.first.first;
-            glm::vec3 resultBlock = glm::vec3(r.first.second.x, r.first.second.y + 1.0f, r.first.second.z);
-            std::shared_ptr<Block> block = nullptr;
-            if (resultBlock.y > 7.0f) {
-                resultBlock.y = 0.0f;
-                resultChunk.y += 1.0f;
-                if (Server::getInstance().chunks.count(resultChunk) && checkValidPos(resultBlock)) {
-                    block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
-                }
-            }
-            else if (checkValidPos(glm::vec3(resultBlock.x, resultBlock.y, resultBlock.z))) {
-                if (resultChunk == chunkPos) {
-                    block = getBlock(resultBlock);
-                }
-                else if (Server::getInstance().chunks.count(resultChunk)) {
-                    block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
-                }
-            }
-            if (block != nullptr && block->id != 0) {
-                affectedChunks.insert(resultChunk);
-            }
-            if (block != nullptr && block->id != 0 && block->lightLevels[4].y < r.second) {
-                // std::cout << "bottom" << std::endl;
-                std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
-                block->lightLevels[4].y = r.second;
-            }
-        }
-        // z
-        {
-            glm::vec3 resultChunk = r.first.first;
-            glm::vec3 resultBlock = glm::vec3(r.first.second.x, r.first.second.y, r.first.second.z - 1.0f);
-            std::shared_ptr<Block> block = nullptr;
-            if (resultBlock.z < 0.0f) {
-                resultBlock.z = 7.0f;
-                resultChunk.z -= 1.0f;
-                if (Server::getInstance().chunks.count(resultChunk) && checkValidPos(resultBlock)) {
-                    block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
-                }
-            }
-            else if (checkValidPos(glm::vec3(resultBlock.x, resultBlock.y, resultBlock.z))) {
-                if (resultChunk == chunkPos) {
-                    block = getBlock(resultBlock);
-                }
-                else if (Server::getInstance().chunks.count(resultChunk)) {
-                    block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
-                }
-            }
-            if (block != nullptr && block->id != 0) {
-                affectedChunks.insert(resultChunk);
-            }
-            if (block != nullptr && block->id != 0 && block->lightLevels[1].y < r.second) {
-                // std::cout << "right" << std::endl;
-                std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
-                block->lightLevels[1].y = r.second;
-            }
-        }
-        {
-            glm::vec3 resultChunk = r.first.first;
-            glm::vec3 resultBlock = glm::vec3(r.first.second.x, r.first.second.y, r.first.second.z + 1.0f);
-            std::shared_ptr<Block> block = nullptr;
-            if (resultBlock.z > 7.0f) {
-                resultBlock.z = 0.0f;
-                resultChunk.z += 1.0f;
-                if (Server::getInstance().chunks.count(resultChunk) && checkValidPos(resultBlock)) {
-                    block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
-                }
-            }
-            else if (checkValidPos(glm::vec3(resultBlock.x, resultBlock.y, resultBlock.z))) {
-                if (resultChunk == chunkPos) {
-                    block = getBlock(resultBlock);
-                }
-                else if (Server::getInstance().chunks.count(resultChunk)) {
-                    block = Server::getInstance().chunks[resultChunk]->getBlock(resultBlock);
-                }
-            }
-            if (block != nullptr && block->id != 0) {
-                affectedChunks.insert(resultChunk);
-            }
-            if (block != nullptr && block->id != 0 && block->lightLevels[0].y < r.second) {
-                // std::cout << "left" << std::endl;
-                std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
-                block->lightLevels[0].y = r.second;
-            }
-        }
+        lightIntensity -= 1;
+        lightQueue = tempQueue;
     }
     return affectedChunks;
 }
 
-std::set<glm::vec3, vec3Comparator> ServerChunkMap::checkHeight(glm::vec3 chunkPos, glm::vec3 blockPos) {
+void ServerChunkMap::checkAmbient(glm::vec3 chunkPos) {
+    std::map<AbsPos, int, vec3PairComparator> lightResult;
+
+    int lightIntensity = 0;
+    std::map<AbsPos, int, vec3PairComparator> lightQueue;
+
+    for (auto& l : ambientSources) {
+        lightQueue[l.first] = l.second;
+    }
+
+    for (auto& a : HeightMap::getInstance().heightMaps[glm::vec2(chunkPos.x, chunkPos.z)]) {
+        if (a.first == chunkPos.y || (a.first == chunkPos.y + 1.0f && a.second.y == 0.0f)) {
+            lightQueue[std::make_pair(glm::vec3(chunkPos.x, a.first, chunkPos.z), glm::vec3(a.second.x, a.second.y, a.second.z))] = 0;
+            lightResult[std::make_pair(glm::vec3(chunkPos.x, a.first, chunkPos.z), glm::vec3(a.second.x, a.second.y, a.second.z))] = 0;
+        }
+    }
+
+    while (!lightQueue.empty() && lightIntensity > -5) {
+        std::map<AbsPos, int, vec3PairComparator> tempQueue;
+        for (auto& l : lightQueue) {
+            for (int side = 0; side < 6; side++) {
+                int direction[6] = {0, 0, 0, 0, 0, 0};
+                direction[side] = 1;
+                {
+                    glm::vec3 lightPos = glm::vec3(l.first.second.x + (float)direction[0] - (float)direction[1], l.first.second.y + (float)direction[2] - (float)direction[3], l.first.second.z + (float)direction[4] - (float)direction[5]);
+                    glm::vec3 lightChunk = l.first.first;
+                    std::shared_ptr<Block> block = nullptr;
+                    bool swappedChunk = false;
+                    if (lightPos.x < 0.0f) { lightPos.x = 7.0f; lightChunk.x -= 1.0f; swappedChunk = true; }
+                    if (lightPos.x > 7.0f) { lightPos.x = 0.0f; lightChunk.x += 1.0f; swappedChunk = true; }
+                    if (lightPos.y < 0.0f) { lightPos.y = 7.0f; lightChunk.y -= 1.0f; swappedChunk = true; }
+                    if (lightPos.y > 7.0f) { lightPos.y = 0.0f; lightChunk.y += 1.0f; swappedChunk = true; }
+                    if (lightPos.z < 0.0f) { lightPos.z = 7.0f; lightChunk.z -= 1.0f; swappedChunk = true; }
+                    if (lightPos.z > 7.0f) { lightPos.z = 0.0f; lightChunk.z += 1.0f; swappedChunk = true; }
+
+                    // printf("%f %f %f chunk %lu\n", lightChunk.x, lightChunk.y, lightChunk.z, Server::getInstance().chunks.count(lightChunk));
+
+                    if (swappedChunk && Server::getInstance().chunks.count(lightChunk)) {
+                        block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
+                    }
+                    if (!swappedChunk) {
+                        if (lightChunk != chunkPos && Server::getInstance().chunks.count(lightChunk)) {
+                            block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
+                        }
+                        else {
+                            block = getBlock(lightPos);
+                        }
+                    }
+                    if (block != nullptr && block->id == 0) {
+                        std::pair<glm::vec3, glm::vec3> lightBlock = std::make_pair(lightChunk, lightPos);
+                        auto heightMap = HeightMap::getInstance().heightMaps.at(glm::vec2(lightChunk.x, lightChunk.z));
+                        auto it = std::find(heightMap.begin(), heightMap.end(), std::pair(lightChunk.y, lightPos));
+                        if ((!lightResult.count(lightBlock) || lightResult[lightBlock] < lightIntensity - 1) && (it == heightMap.end() || (lightPos.x == 0.0f || lightPos.x == 7.0f || lightPos.z == 0.0f || lightPos.z == 7.0f))) {
+                            tempQueue[lightBlock] = lightIntensity - 1;
+                            lightResult[lightBlock] = lightIntensity - 1;
+                        }
+                    }
+                }
+            }
+        }
+        lightIntensity -= 1;
+        lightQueue = tempQueue;
+    }
+
+    for (auto& l : lightResult) {
+        for (int side = 0; side < 6; side++) {
+            int direction[6] = {0, 0, 0, 0, 0, 0};
+            int blockside[6] = {2, 3, 4, 5, 0, 1};
+            direction[side] = 1;
+            {
+                glm::vec3 lightPos = glm::vec3(l.first.second.x + (float)direction[0] - (float)direction[1], l.first.second.y + (float)direction[2] - (float)direction[3], l.first.second.z + (float)direction[4] - (float)direction[5]);
+                glm::vec3 lightChunk = l.first.first;
+                std::shared_ptr<Block> block = nullptr;
+
+                if (lightPos.x < 0.0f) { lightPos.x = 7.0f; lightChunk.x -= 1.0f; }
+                if (lightPos.x > 7.0f) { lightPos.x = 0.0f; lightChunk.x += 1.0f; }
+                if (lightPos.y < 0.0f) { lightPos.y = 7.0f; lightChunk.y -= 1.0f; }
+                if (lightPos.y > 7.0f) { lightPos.y = 0.0f; lightChunk.y += 1.0f; }
+                if (lightPos.z < 0.0f) { lightPos.z = 7.0f; lightChunk.z -= 1.0f; }
+                if (lightPos.z > 7.0f) { lightPos.z = 0.0f; lightChunk.z += 1.0f; }
+
+                if (chunkPos == lightChunk && checkValidPos(lightPos)) {
+                    block = getBlock(lightPos);
+                }
+
+                if (block != nullptr && block->id != 0) {
+                    block->lightLevels[blockside[side]].y = l.second;
+                }
+            }
+        }
+    }
+}
+
+std::pair<std::set<glm::vec3, vec3Comparator>, std::pair<AbsPos, AbsPos>> ServerChunkMap::checkHeight(glm::vec3 chunkPos, glm::vec3 blockPos) {
     std::set<glm::vec3, vec3Comparator> affectedChunks;
     affectedChunks.insert(chunkPos);
 
-    if (blockPos.x == 0.0f && Server::getInstance().chunks.count(glm::vec3(chunkPos.x - 1.0f, chunkPos.y, chunkPos.z))) {
-        affectedChunks.insert(glm::vec3(chunkPos.x - 1.0f, chunkPos.y, chunkPos.z));
-    }
-    if (blockPos.x == 7.0f && Server::getInstance().chunks.count(glm::vec3(chunkPos.x + 1.0f, chunkPos.y, chunkPos.z))) {
-        affectedChunks.insert(glm::vec3(chunkPos.x + 1.0f, chunkPos.y, chunkPos.z));
-    }
+    // if (blockPos.x == 0.0f && Server::getInstance().chunks.count(glm::vec3(chunkPos.x - 1.0f, chunkPos.y, chunkPos.z))) {
+    //     affectedChunks.insert(glm::vec3(chunkPos.x - 1.0f, chunkPos.y, chunkPos.z));
+    // }
+    // if (blockPos.x == 7.0f && Server::getInstance().chunks.count(glm::vec3(chunkPos.x + 1.0f, chunkPos.y, chunkPos.z))) {
+    //     affectedChunks.insert(glm::vec3(chunkPos.x + 1.0f, chunkPos.y, chunkPos.z));
+    // }
+    //
+    // if (blockPos.y == 0.0f && Server::getInstance().chunks.count(glm::vec3(chunkPos.x, chunkPos.y - 1.0f, chunkPos.z))) {
+    //     affectedChunks.insert(glm::vec3(chunkPos.x, chunkPos.y - 1.0f, chunkPos.z));
+    // }
+    // if (blockPos.y == 7.0f && Server::getInstance().chunks.count(glm::vec3(chunkPos.x, chunkPos.y + 1.0f, chunkPos.z))) {
+    //     affectedChunks.insert(glm::vec3(chunkPos.x, chunkPos.y + 1.0f, chunkPos.z));
+    // }
+    //
+    // if (blockPos.z == 0.0f && Server::getInstance().chunks.count(glm::vec3(chunkPos.x, chunkPos.y, chunkPos.z - 1.0f))) {
+    //     affectedChunks.insert(glm::vec3(chunkPos.x, chunkPos.y, chunkPos.z - 1.0f));
+    // }
+    // if (blockPos.z == 7.0f && Server::getInstance().chunks.count(glm::vec3(chunkPos.x, chunkPos.y, chunkPos.z + 1.0f))) {
+    //     affectedChunks.insert(glm::vec3(chunkPos.x, chunkPos.y, chunkPos.z + 1.0f));
+    // }
 
-    if (blockPos.y == 0.0f && Server::getInstance().chunks.count(glm::vec3(chunkPos.x, chunkPos.y - 1.0f, chunkPos.z))) {
-        affectedChunks.insert(glm::vec3(chunkPos.x, chunkPos.y - 1.0f, chunkPos.z));
-    }
-    if (blockPos.y == 7.0f && Server::getInstance().chunks.count(glm::vec3(chunkPos.x, chunkPos.y + 1.0f, chunkPos.z))) {
-        affectedChunks.insert(glm::vec3(chunkPos.x, chunkPos.y + 1.0f, chunkPos.z));
-    }
+    std::pair<AbsPos, AbsPos> noChanges = std::make_pair(std::make_pair(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f, -1.0f, -1.0f)), std::make_pair(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f, -1.0f, -1.0f)));
 
-    if (blockPos.z == 0.0f && Server::getInstance().chunks.count(glm::vec3(chunkPos.x, chunkPos.y, chunkPos.z - 1.0f))) {
-        affectedChunks.insert(glm::vec3(chunkPos.x, chunkPos.y, chunkPos.z - 1.0f));
-    }
-    if (blockPos.z == 7.0f && Server::getInstance().chunks.count(glm::vec3(chunkPos.x, chunkPos.y, chunkPos.z + 1.0f))) {
-        affectedChunks.insert(glm::vec3(chunkPos.x, chunkPos.y, chunkPos.z + 1.0f));
-    }
-
-    if (!HeightMap::getInstance().heightMaps.count(glm::vec2(chunkPos.x, chunkPos.z))) { return affectedChunks; }
+    if (!HeightMap::getInstance().heightMaps.count(glm::vec2(chunkPos.x, chunkPos.z))) { return std::make_pair(affectedChunks, noChanges); }
 
     auto res = std::find_if(HeightMap::getInstance().heightMaps[glm::vec2(chunkPos.x, chunkPos.z)].begin(), HeightMap::getInstance().heightMaps[glm::vec2(chunkPos.x, chunkPos.z)].end(), [&](auto& heightblock) {
         if (heightblock.second.x == blockPos.x && heightblock.second.z == blockPos.z) { return true; } return false;
     });
-    if (res == HeightMap::getInstance().heightMaps[glm::vec2(chunkPos.x, chunkPos.z)].end()) { return affectedChunks; }
+    if (res == HeightMap::getInstance().heightMaps[glm::vec2(chunkPos.x, chunkPos.z)].end()) { return std::make_pair(affectedChunks, noChanges); }
 
-    // printf("%f %f %f chunk\n", chunkPos.x, chunkPos.z, chunkPos.z);
-
+    // printf("%f %f %f chunk %f %f %f block !!!\n", chunkPos.x, chunkPos.y, chunkPos.z, blockPos.x, blockPos.y, blockPos.z);
+    auto prevblock = std::make_pair(glm::vec3(chunkPos.x, res->first, chunkPos.z), res->second);
+    // printf("%f %f %f chunk %f %f %f block ???\n", prevblock.first.x, prevblock.first.y, prevblock.first.z, prevblock.second.x, prevblock.second.y, prevblock.second.z);
     if (res->second.y + (res->first * 8.0f) <= blockPos.y + (chunkPos.y * 8.0f) && getBlock(blockPos)->id != 0) {
         float prevheight = res->first;
         if (blockPos.y + 1.0f > 7.0f) {
@@ -1027,7 +498,8 @@ std::set<glm::vec3, vec3Comparator> ServerChunkMap::checkHeight(glm::vec3 chunkP
         }
         affectedChunks.insert(glm::vec3(chunkPos.x, prevheight, chunkPos.z));
         affectedChunks.insert(glm::vec3(chunkPos.x, res->first, chunkPos.z));
-        return affectedChunks;
+        auto currentblock = std::make_pair(glm::vec3(chunkPos.x, res->first, chunkPos.z), res->second);
+        return std::make_pair(affectedChunks, std::make_pair(currentblock, prevblock));
     }
     if (res->second.y + (res->first * 8.0f) > blockPos.y + (chunkPos.y * 8.0f) && getBlock(blockPos)->id == 0) {
         float prevheight = res->first;
@@ -1056,9 +528,10 @@ std::set<glm::vec3, vec3Comparator> ServerChunkMap::checkHeight(glm::vec3 chunkP
                 res->second = glm::vec3(solidPos.x, solidPos.y, solidPos.z);
                 affectedChunks.insert(glm::vec3(chunkPos.x, prevheight, chunkPos.z));
                 affectedChunks.insert(glm::vec3(chunkPos.x, res->first, chunkPos.z));
-                return affectedChunks;
+                auto currentblock = std::make_pair(glm::vec3(chunkPos.x, res->first, chunkPos.z), res->second);
+                return std::make_pair(affectedChunks, std::make_pair(currentblock, prevblock));
             }
         }
     }
-    return affectedChunks;
+    return std::make_pair(affectedChunks, noChanges);
 }

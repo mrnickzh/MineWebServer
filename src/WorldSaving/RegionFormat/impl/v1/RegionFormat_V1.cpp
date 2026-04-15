@@ -35,6 +35,34 @@ void RegionFormat_V1::load(ByteBuf &buffer, glm::vec3 pos) {
             chunkMap->addBlock(blockPos, block);
         }
 
+        int lightSize = buffer.readInt();
+        for (int j = 0; j < lightSize; j++) {
+            float lcx = buffer.readFloat();
+            float lcy = buffer.readFloat();
+            float lcz = buffer.readFloat();
+            float lbx = buffer.readFloat();
+            float lby = buffer.readFloat();
+            float lbz = buffer.readFloat();
+            int lvl = buffer.readInt();
+            glm::vec3 lightChunkPos = glm::vec3(lcx, lcy, lcz);
+            glm::vec3 lightBlockPos = glm::vec3(lbx, lby, lbz);
+            chunkMap->lightSources[std::make_pair(lightChunkPos, lightBlockPos)] = lvl;
+        }
+
+        int ambientSize = buffer.readInt();
+        for (int j = 0; j < ambientSize; j++) {
+            float lcx = buffer.readFloat();
+            float lcy = buffer.readFloat();
+            float lcz = buffer.readFloat();
+            float lbx = buffer.readFloat();
+            float lby = buffer.readFloat();
+            float lbz = buffer.readFloat();
+            int lvl = buffer.readInt();
+            glm::vec3 lightChunkPos = glm::vec3(lcx, lcy, lcz);
+            glm::vec3 lightBlockPos = glm::vec3(lbx, lby, lbz);
+            chunkMap->ambientSources[std::make_pair(lightChunkPos, lightBlockPos)] = lvl;
+        }
+
         // std::cout << regionChunk.x << " " << regionChunk.y << " " << regionChunk.z << " regionchunk" << std::endl;
         {
             std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
@@ -85,6 +113,28 @@ void RegionFormat_V1::save(ByteBuf &buffer, glm::vec3 pos) {
                         buffer.writeInt(blockPair->lightLevels[l].x);
                         buffer.writeInt(blockPair->lightLevels[l].y);
                     }
+                }
+
+                buffer.writeInt((int)(map->lightSources.size()));
+                for (auto& sources : map->lightSources) {
+                    buffer.writeFloat(sources.first.first.x);
+                    buffer.writeFloat(sources.first.first.y);
+                    buffer.writeFloat(sources.first.first.z);
+                    buffer.writeFloat(sources.first.second.x);
+                    buffer.writeFloat(sources.first.second.y);
+                    buffer.writeFloat(sources.first.second.z);
+                    buffer.writeInt(sources.second);
+                }
+
+                buffer.writeInt((int)(map->ambientSources.size()));
+                for (auto& sources : map->ambientSources) {
+                    buffer.writeFloat(sources.first.first.x);
+                    buffer.writeFloat(sources.first.first.y);
+                    buffer.writeFloat(sources.first.first.z);
+                    buffer.writeFloat(sources.first.second.x);
+                    buffer.writeFloat(sources.first.second.y);
+                    buffer.writeFloat(sources.first.second.z);
+                    buffer.writeInt(sources.second);
                 }
             }
         }

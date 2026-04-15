@@ -266,15 +266,16 @@ public:
             float hx = hmbb.readFloat();
             float hy = hmbb.readFloat();
             int hsize = hmbb.readInt();
+            glm::vec2 hpos = glm::vec2(hx, hy);
+            HeightMap::getInstance().addMap(hpos);
             for (int j = 0; j < hsize; j++) {
                 float cy = hmbb.readFloat();
                 float bx = hmbb.readFloat();
                 float by = hmbb.readFloat();
                 float bz = hmbb.readFloat();
                 // printf("hm x: %f, z: %f, h: %f, bx: %f, by: %f, bz: %f\n", hx, hy, cy, bx, by, bz);
-                glm::vec2 hpos = glm::vec2(hx, hy);
                 glm::vec3 bpos = glm::vec3(bx, by, bz);
-                HeightMap::getInstance().addMap(hpos, cy, bpos);
+                HeightMap::getInstance().addSource(hpos, cy, bpos);
             }
         }
 

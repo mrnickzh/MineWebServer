@@ -17,10 +17,14 @@ public:
         return instance;
     }
 
-    void addMap(glm::vec2 xz, float height, glm::vec3 blockpos) {
+    void addMap(glm::vec2 xz) {
         if (heightMaps.find(xz) == heightMaps.end()) {
             heightMaps[xz] = std::vector<std::pair<float, glm::vec3>>();
         }
+    }
+
+    void addSource(glm::vec2 xz, float height, glm::vec3 blockpos) {
+        addMap(xz);
         heightMaps[xz].push_back(std::make_pair(height, blockpos));
     }
 };

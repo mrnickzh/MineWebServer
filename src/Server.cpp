@@ -29,7 +29,8 @@ void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>
     std::thread lightthread([&]() {
         while (true) {
             // std::cout << lightUpdateQueue.size() << " queue" << std::endl;
-            std::set<glm::vec3, vec3Comparator> affectedChunks;
+            std::set<glm::vec3, vec3Comparator> L_updatedChunks;
+            std::set<glm::vec3, vec3Comparator> A_updatedChunks;
             std::set<glm::vec3, vec3Comparator> updatedChunks;
             std::deque<std::pair<glm::vec3, Block>> tempLightQueue;
             for (auto p : Server::getInstance().lightUpdateFallbackQueue) {
@@ -45,49 +46,43 @@ void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>
             while (!lightUpdateQueue.empty()) {
                 std::lock_guard<std::mutex> guard(lightUpdateQueueMutex);
                 std::pair<glm::vec3, Block> lightChunk = lightUpdateQueue.front();
-                {
-                    std::set<glm::vec3, vec3Comparator> L_affectedChunks;
-                    std::set<glm::vec3, vec3Comparator> A_affectedChunks;
 
-                    A_affectedChunks = Server::getInstance().chunks[lightChunk.first]->checkHeight(lightChunk.first, lightChunk.second.position);
-                    Server::getInstance().chunks[lightChunk.first]->resetLights();
-                    L_affectedChunks = Server::getInstance().chunks[lightChunk.first]->checkLights(lightChunk.first, lightChunk.second);
+                std::set<glm::vec3, vec3Comparator> L_affectedChunks;
+                if (lightChunk.second.id == 5) { L_affectedChunks = Server::getInstance().chunks[lightChunk.first]->simulateLightSource(lightChunk.first, lightChunk.second, false, REMOVE); }
+                else if (Server::getInstance().chunks[lightChunk.first]->getBlock(lightChunk.second.position)->id == 5) { L_affectedChunks = Server::getInstance().chunks[lightChunk.first]->simulateLightSource(lightChunk.first, lightChunk.second, false, ADD); }
+                else { L_affectedChunks = Server::getInstance().chunks[lightChunk.first]->simulateLightSource(lightChunk.first, lightChunk.second, false, NONE); }
+                L_updatedChunks.insert(L_affectedChunks.begin(), L_affectedChunks.end());
 
-                    for (auto c : L_affectedChunks) {
-                        Server::getInstance().chunks[c]->resetLights();
-                    }
-                    for (auto c : L_affectedChunks) {
-                        affectedChunks.insert(c);
-                        Server::getInstance().chunks[c]->checkLights(c, Block(0, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), false, glm::vec3(0.5f, 0.5f, 0.5f)));
-                    }
-                    for (auto c : A_affectedChunks) {
-                        affectedChunks.insert(c);
-                        std::set<glm::vec3, vec3Comparator> chunks = Server::getInstance().chunks[c]->checkAmbient(c);
-                        for (auto& a : chunks) {
-                            affectedChunks.insert(a);
-                        }
-                    }
+                auto heightResult = Server::getInstance().chunks[lightChunk.first]->checkHeight(lightChunk.first, lightChunk.second.position);
+                if (heightResult.second != std::make_pair(std::make_pair(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f, -1.0f, -1.0f)), std::make_pair(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f, -1.0f, -1.0f)))) {
+                    std::set<glm::vec3, vec3Comparator> removeResult = Server::getInstance().chunks[lightChunk.first]->simulateAmbientSource(lightChunk.first, heightResult.second.second, false, REMOVE);
+                    std::set<glm::vec3, vec3Comparator> addResult = Server::getInstance().chunks[lightChunk.first]->simulateAmbientSource(lightChunk.first, heightResult.second.first, false, ADD);
+                    A_updatedChunks.insert(removeResult.begin(), removeResult.end());
+                    A_updatedChunks.insert(addResult.begin(), addResult.end());
                 }
+
                 lightUpdateQueue.pop_front();
             }
-            // std::cout << affectedChunks.size() << " size" << std::endl;
-            for (auto c : affectedChunks) {
-                Server::getInstance().chunks[c]->resetAmbient();
+            // std::cout << updatedChunks.size() << " size" << std::endl;
+            for (auto c : L_updatedChunks) {
+                Server::getInstance().chunks[c]->resetLights();
+                Server::getInstance().chunks[c]->checkLights(c);
+                updatedChunks.insert(c);
             }
-            for (auto c : affectedChunks) {
-                std::set<glm::vec3, vec3Comparator> chunks = Server::getInstance().chunks[c]->checkAmbient(c);
-                for (auto& a : chunks) {
-                    updatedChunks.insert(a);
-                }
+            for (auto c : A_updatedChunks) {
+                Server::getInstance().chunks[c]->resetAmbient();
+                Server::getInstance().chunks[c]->checkAmbient(c);
+                updatedChunks.insert(c);
             }
             for (auto c : updatedChunks) {
+                // printf("%f %f %f chunk\n", c.x, c.y, c.z);
                 LightMapServer lightpacket;
                 lightpacket.chunkpos = c;
                 for (auto& s : Server::getInstance().clients) {
                     Server::getInstance().sendPacket(s.first, &lightpacket);
                 }
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
     });
     lightthread.detach();
