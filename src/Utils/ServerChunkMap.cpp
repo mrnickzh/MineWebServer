@@ -406,9 +406,7 @@ void ServerChunkMap::checkAmbient(glm::vec3 chunkPos) {
                     }
                     if (block != nullptr && block->id == 0) {
                         std::pair<glm::vec3, glm::vec3> lightBlock = std::make_pair(lightChunk, lightPos);
-                        auto heightMap = HeightMap::getInstance().heightMaps.at(glm::vec2(lightChunk.x, lightChunk.z));
-                        auto it = std::find(heightMap.begin(), heightMap.end(), std::pair(lightChunk.y, lightPos));
-                        if ((!lightResult.count(lightBlock) || lightResult[lightBlock] < lightIntensity - 1) && (it == heightMap.end() || (lightPos.x == 0.0f || lightPos.x == 7.0f || lightPos.z == 0.0f || lightPos.z == 7.0f))) {
+                        if (!lightResult.count(lightBlock) || lightResult[lightBlock] < lightIntensity - 1) {
                             tempQueue[lightBlock] = lightIntensity - 1;
                             lightResult[lightBlock] = lightIntensity - 1;
                         }

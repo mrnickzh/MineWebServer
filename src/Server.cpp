@@ -60,6 +60,10 @@ void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>
                     A_updatedChunks.insert(removeResult.begin(), removeResult.end());
                     A_updatedChunks.insert(addResult.begin(), addResult.end());
                 }
+                else {
+                    std::set<glm::vec3, vec3Comparator> noneResult = Server::getInstance().chunks[lightChunk.first]->simulateAmbientSource(lightChunk.first, std::make_pair(lightChunk.first, lightChunk.second.position), false, NONE);
+                    A_updatedChunks.insert(noneResult.begin(), noneResult.end());
+                }
 
                 lightUpdateQueue.pop_front();
             }
