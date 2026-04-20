@@ -57,13 +57,14 @@ public:
 
         // std::cout << uuid << std::endl;
 
+        PlayerAuthInputServer packet;
+        packet.uuid = session->uuid;
+        packet.position = position;
+        packet.rotation = rotation;
+        packet.velocity = velocity;
+
         for (auto& s : Server::getInstance().clients) {
             if (s.first != session) {
-                PlayerAuthInputServer packet;
-                packet.uuid = session->uuid;
-                packet.position = position;
-                packet.rotation = rotation;
-                packet.velocity = velocity;
                 Server::getInstance().sendPacket(s.first, &packet);
             }
         }

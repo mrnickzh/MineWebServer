@@ -24,8 +24,32 @@ public:
     void process(ClientSession* session) override {
         if (message[0] == '/') {
             message.erase(0, 1);
-            std::vector<std::string> args = StrSplit::str_split(message, "/");
+            std::vector<std::string> args = StrSplit::str_split(message, " ");
             if (args.size() < 1) { return; }
+            if (args[0] == "tp") {
+                float x = std::stof(args[1]);
+                float y = std::stof(args[2]);
+                float z = std::stof(args[3]);
+
+                std::shared_ptr<ServerEntity> entity = Server::getInstance().entities[session->uuid];
+                entity->position = glm::vec3(x, y, z);
+
+                PlayerAuthInputServer packet;
+                packet.uuid = session->uuid;
+                packet.position = entity->position;
+                packet.rotation = entity->rotation;
+                packet.velocity = Server::getInstance().serverPhysicsEngine->getVelocity(entity);
+                for (auto& s : Server::getInstance().clients) {
+                    Server::getInstance().sendPacket(s.first, &packet);
+                }
+
+                PlayerAuthInputServer localpacket;
+                localpacket.uuid = "local";
+                localpacket.position = packet.position;
+                localpacket.rotation = packet.rotation;
+                localpacket.velocity = packet.velocity;
+                Server::getInstance().sendPacket(session, &localpacket);
+            }
             if (args[0] == "entity") {
                 std::string euuid = uuid::v4::UUID::New().String();
                 std::shared_ptr<ServerEntity> entity = std::make_shared<ServerEntity>(euuid, 50, glm::vec3(0.0f, 5.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), true, glm::vec3(0.25f, 0.75f, 0.25f));
@@ -49,7 +73,7 @@ public:
 
                 ChatMessageServer chatpacket;
                 chatpacket.message = "Entity created";
-                Server::getInstance().sendPacket(session, &packet);
+                Server::getInstance().sendPacket(session, &chatpacket);
             }
         }
         else {

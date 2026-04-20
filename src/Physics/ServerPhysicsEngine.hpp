@@ -30,9 +30,10 @@ public:
     void addVelocity(std::shared_ptr<ServerEntity> object, glm::vec3 velocity);
     void addVelocityClamped(std::shared_ptr<ServerEntity> object, glm::vec3 velocity, glm::vec3 limit);
     void setVelocity(std::shared_ptr<ServerEntity> object, glm::vec3 velocity);
-    bool isOnFoot(std::shared_ptr<ServerEntity> object);
+    bool isOnFoot(std::shared_ptr<ServerPhysicsObject> object);
     ServerRaycastResult raycast(float length, glm::vec3 startpos, glm::vec3 rotation);
     glm::vec3 getVelocity(std::shared_ptr<ServerEntity> object);
+    std::shared_ptr<ServerPhysicsObject> getPhysicsObject(std::shared_ptr<ServerEntity> object);
     void step();
 
     bool isColliding(glm::vec3 object1, glm::vec3 object2, glm::vec3 collider1, glm::vec3 collider2);

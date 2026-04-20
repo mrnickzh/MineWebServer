@@ -304,28 +304,31 @@ glm::vec3 ServerPhysicsEngine::getVelocity(std::shared_ptr<ServerEntity> object)
     return glm::vec3(0.0f, 0.0f, 0.0f);
 }
 
-bool ServerPhysicsEngine::isOnFoot(std::shared_ptr<ServerEntity> object) {
+std::shared_ptr<ServerPhysicsObject> ServerPhysicsEngine::getPhysicsObject(std::shared_ptr<ServerEntity> object) {
     glm::vec3 currentChunk = glm::vec3(floor(object->position.x / 8.0f), floor(object->position.y / 8.0f), floor(object->position.z / 8.0f));
     auto it = std::find_if(registeredObjects[currentChunk].begin(), registeredObjects[currentChunk].end(), [&object](const std::shared_ptr<ServerPhysicsObject>& obj) {return obj->object == object; });
-    if (it != registeredObjects[currentChunk].end()) { 
-        std::vector<Block> obstacles = possibleObstacles(it->get()->getPosition());
-        for (auto &obstacle : obstacles) {
-            if (!obstacle.cancollide) { continue; }
+    if (it != registeredObjects[currentChunk].end()) { return *it; }
+    return nullptr;
+}
 
-            ServerAABB obj1 = ServerGetAABB::CP2AABB(object->collider, object->position);
-            ServerAABB obj2 = ServerGetAABB::CP2AABB(obstacle.collider, obstacle.position);
+bool ServerPhysicsEngine::isOnFoot(std::shared_ptr<ServerPhysicsObject> object) {
+    std::vector<Block> obstacles = possibleObstacles(object->getPosition());
+    for (auto &obstacle : obstacles) {
+        if (!obstacle.cancollide) { continue; }
 
-            bool footcheckd = obj1.AA.y - 0.01f <= obj2.BB.y;
-            bool footchecku = obj1.AA.y + 0.01f >= obj2.BB.y;
-            bool xcheck1 = obj1.AA.x < obj2.BB.x;
-            bool x1check1 = obj1.BB.x > obj2.AA.x;
-            bool zcheck1 = obj1.AA.z < obj2.BB.z;
-            bool z1check1 = obj1.BB.z > obj2.AA.z;
+        ServerAABB obj1 = ServerGetAABB::CP2AABB(object->object->collider, object->object->position);
+        ServerAABB obj2 = ServerGetAABB::CP2AABB(obstacle.collider, obstacle.position);
 
-            // std::cout << footcheckd << " " << footchecku << std::endl;
+        bool footcheckd = obj1.AA.y - 0.01f <= obj2.BB.y;
+        bool footchecku = obj1.AA.y + 0.01f >= obj2.BB.y;
+        bool xcheck1 = obj1.AA.x < obj2.BB.x;
+        bool x1check1 = obj1.BB.x > obj2.AA.x;
+        bool zcheck1 = obj1.AA.z < obj2.BB.z;
+        bool z1check1 = obj1.BB.z > obj2.AA.z;
 
-            if (footcheckd && footchecku && xcheck1 && x1check1 && zcheck1 && z1check1) { return true; }
-        }
+        // std::cout << footcheckd << " " << footchecku << std::endl;
+
+        if (footcheckd && footchecku && xcheck1 && x1check1 && zcheck1 && z1check1) { return true; }
     }
     return false;
 }
