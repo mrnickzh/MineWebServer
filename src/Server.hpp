@@ -20,6 +20,8 @@
 #include "../lib/glm/glm.hpp"
 #include "../lib/glm/gtc/matrix_transform.hpp"
 #include "../lib/glm/gtc/type_ptr.hpp"
+#include "Modding/ServerModManager.hpp"
+#include "Utils/ServerBlockRegistry.hpp"
 
 struct SeedMap {
 public:
@@ -77,10 +79,50 @@ public:
     std::deque<std::pair<ClientSession*, std::vector<uint8_t>>> serverFallbackPacketQueue;
 #endif
 
+    ServerBlockRegistry* serverBlockRegistry = new ServerBlockRegistry();
+    ServerModManager* serverModManager = new ServerModManager();
+    int maxblockid = 0;
+
     SeedMap* seedMap;
 
     Server() {
         seedMap = new SeedMap(32335);
+
+        Block air = Block(0, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), false, glm::vec3(0.5f, 0.5f, 0.5f));
+        serverBlockRegistry->registerBlock(0, air, "base", std::to_string(0));
+
+        {
+            nlohmann::json assets;
+#ifndef BUILD_TYPE_DEDICATED
+            std::ifstream manifestfile("/assets/manifest.json");
+#else
+            std::ifstream manifestfile("manifest.json");
+#endif
+
+            if (!manifestfile) {
+                std::cout << "no assets manifest found" << std::endl;
+            } else manifestfile >> assets;
+
+            for (auto& element : assets["blocks"].items()) {
+                nlohmann::json mblock = element.value();
+                int id = mblock["id"];
+                bool cancollide = mblock["cancollide"];
+                int lightlevel = mblock["lightlevel"];
+                Block block = Block(id, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), cancollide, glm::vec3(0.5f, 0.5f, 0.5f));
+                if (lightlevel > 0) {
+                    block.lightlevel = lightlevel;
+                }
+                serverBlockRegistry->registerBlock(id, block, "base", std::to_string(id));
+                maxblockid = id + 1;
+            }
+
+            // for (auto& element : assets["entities"].items()) {
+            //     nlohmann::json entity = element.value();
+            //     int id = entity["id"];
+            //     std::string texture = entity["texture"];
+            //     Main::textureManager->addTexture(texture, id);
+            // }
+        }
     }
 
     static Server& getInstance() {

@@ -22,10 +22,18 @@ void RegionFormat_V1::load(ByteBuf &buffer, glm::vec3 pos) {
             float bx = buffer.readFloat();
             float by = buffer.readFloat();
             float bz = buffer.readFloat();
-            int id = buffer.readInt();
+            std::string mod = buffer.readString();
+            std::string id = buffer.readString();
 
+            int realid;
+            if (mod == "base") {
+                realid = std::stoi(id);
+            }
+            else {
+                realid = Server::getInstance().serverModManager->mods[mod]->modBlocks[id];
+            }
             glm::vec3 blockPos = glm::vec3(bx, by, bz);
-            std::shared_ptr<Block> block = std::make_shared<Block>(id, blockPos, glm::vec3(0.0f, 0.0f, 0.0f), (id == 0 ? false : true), glm::vec3(0.5f, 0.5f, 0.5f));
+            std::shared_ptr<Block> block = std::make_shared<Block>(realid, blockPos, glm::vec3(0.0f, 0.0f, 0.0f), (realid == 0 ? false : true), glm::vec3(0.5f, 0.5f, 0.5f));
 
             for (int l = 0; l < 6; l++) {
                 block->lightLevels[l].x = buffer.readInt();
@@ -108,7 +116,9 @@ void RegionFormat_V1::save(ByteBuf &buffer, glm::vec3 pos) {
                     buffer.writeFloat(blockPair->position.x);
                     buffer.writeFloat(blockPair->position.y);
                     buffer.writeFloat(blockPair->position.z);
-                    buffer.writeInt(blockPair->id);
+                    std::pair<std::string, std::string> blockMod = Server::getInstance().serverBlockRegistry->getBlock(blockPair->id).first;
+                    buffer.writeString(blockMod.first);
+                    buffer.writeString(blockMod.second);
                     for (int l = 0; l < 6; l++) {
                         buffer.writeInt(blockPair->lightLevels[l].x);
                         buffer.writeInt(blockPair->lightLevels[l].y);

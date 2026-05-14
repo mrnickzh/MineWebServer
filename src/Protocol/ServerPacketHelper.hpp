@@ -35,8 +35,10 @@ namespace ServerPacketHelper {
     }
 
     inline std::vector<uint8_t> encodePacket(ServerPacket* packet) {
+        // ByteBuf buffer(65536);
         ByteBuf buffer(65536);
         int id = getPacketId(packet);
+        // printf("%d\n sent", id);
         buffer.writeInt(id);
         packet->send(buffer);
         return buffer.toByteArray();

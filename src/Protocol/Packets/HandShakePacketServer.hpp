@@ -7,7 +7,9 @@
 #include "EntityActionServer.hpp"
 #include "PlayerAuthInputServer.hpp"
 #include "NetworkSettingsPacket.hpp"
+#include "RegisterModServer.hpp"
 #include "Server.hpp"
+#include "TransferModServer.hpp"
 #include "Utils/uuid.hpp"
 
 class HandShakePacketServer : public ServerPacket {
@@ -28,6 +30,20 @@ public:
         networkSettings.settings = session->networkSettings;
         Server::getInstance().sendPacket(session, &networkSettings);
         session->connectionState = ConnectionState::PLAY;
+
+#ifdef BUILD_TYPE_DEDICATED
+        for (auto mod : Server::getInstance().serverModManager->mods) {
+            TransferModServer transferMod;
+            transferMod.modName = mod.first;
+            Server::getInstance().sendPacket(session, &transferMod);
+        }
+#endif
+
+        for (auto mod : Server::getInstance().serverModManager->mods) {
+            RegisterModServer regMod;
+            regMod.modName = mod.first;
+            Server::getInstance().sendPacket(session, &regMod);
+        }
 
         std::shared_ptr<ServerEntity> entity = std::make_shared<ServerEntity>(session->uuid, 49, glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), true, glm::vec3(0.25f, 0.75f, 0.25f));
         Server::getInstance().entities[session->uuid] = entity;

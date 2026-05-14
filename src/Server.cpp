@@ -8,8 +8,11 @@
 #include "Protocol/Packets/ChatMessageServer.hpp"
 #include "Protocol/Packets/GenerateChunkServer.hpp"
 #include "Protocol/Packets/HandShakePacketServer.hpp"
+#include "Protocol/Packets/RegisterModServer.hpp"
 
 void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>)> callback) {
+    serverModManager->initLoad();
+
     this->callback = std::move(callback);
     ServerPacketHelper::registerPacket(0, []() { return new HandShakePacketServer(); });
     ServerPacketHelper::registerPacket(1, []() { return new EditChunkServer(); });
@@ -19,6 +22,8 @@ void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>
     ServerPacketHelper::registerPacket(5, []() { return new LightMapServer(); });
     ServerPacketHelper::registerPacket(6, []() { return new ChatMessageServer(); });
     ServerPacketHelper::registerPacket(7, []() { return new NetworkSettingsPacketServer(); });
+    ServerPacketHelper::registerPacket(8, []() { return new TransferModServer(); });
+    ServerPacketHelper::registerPacket(9, []() { return new RegisterModServer(); });
 
     this->serverPhysicsEngine = std::make_unique<ServerPhysicsEngine>(&this->chunks);
 

@@ -5,6 +5,7 @@
 #include <cstring>
 #include <cstdint>
 #include <cassert>
+#include <iostream>
 
 class ByteBuf {
 private:
@@ -95,6 +96,10 @@ public:
         return std::vector<uint8_t>(buffer.begin(), buffer.begin() + position);
     }
 
+    std::vector<uint8_t> toByteArray(int size) const {
+        return std::vector<uint8_t>(buffer.begin() + position, buffer.begin() + position + size);
+    }
+
     void fromByteArray(const std::vector<uint8_t>& data) {
         buffer = data;
         position = 0;
@@ -109,4 +114,13 @@ public:
         return std::string(buffer.begin(), buffer.end());
     }
 
+    void concat(const ByteBuf& other) {
+        buffer.resize(position);
+        buffer.insert(buffer.end(), other.buffer.begin(), other.buffer.end());
+        position += other.buffer.size();
+    }
+
+    void resize(int size) {
+        buffer.resize(size);
+    }
 };

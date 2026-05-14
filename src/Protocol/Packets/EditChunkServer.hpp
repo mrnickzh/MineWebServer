@@ -36,6 +36,11 @@ public:
             prevblock = *(Server::getInstance().chunks[chunkpos]->getBlock(blockpos));
             std::shared_ptr<Block> block = std::make_shared<Block>(id, blockpos, glm::vec3(0.0f, 0.0f, 0.0f), (id == 0 ? false : true), glm::vec3(0.5f, 0.5f, 0.5f));
             Server::getInstance().chunks[chunkpos]->addBlock(blockpos, block);
+
+            std::string modName = Server::getInstance().serverBlockRegistry->getBlock(id).first.first;
+            if (modName != "base") {
+                Server::getInstance().serverModManager->mods[modName]->doEvent("block_removed");
+            }
         }
         // A_affectedChunks = Server::getInstance().chunks[chunkpos]->checkHeight(chunkpos, blockpos);
         // L_affectedChunks = Server::getInstance().chunks[chunkpos]->checkLights(chunkpos, prevblock);
