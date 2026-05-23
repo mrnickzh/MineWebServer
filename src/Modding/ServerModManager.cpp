@@ -3,7 +3,11 @@
 #include "Utils/ZipUtils.hpp"
 
 ServerModManager::ServerModManager() {
+#ifdef BUILD_TYPE_DEDICATED
+    std::filesystem::create_directory("mods");
+#else
     std::filesystem::create_directory("/mods");
+#endif
 }
 
 void ServerModManager::initLoad() {
