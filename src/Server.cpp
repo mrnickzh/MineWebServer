@@ -30,7 +30,9 @@ void Server::setCallback(std::function<void(ClientSession*, std::vector<uint8_t>
     if (!std::filesystem::exists("regions")) {
         std::filesystem::create_directory("regions");
     }
+}
 
+void Server::start() {
     std::thread lightthread([&]() {
         while (true) {
             // std::cout << lightUpdateQueue.size() << " queue" << std::endl;
