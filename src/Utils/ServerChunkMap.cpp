@@ -172,7 +172,7 @@ std::set<glm::vec3, vec3Comparator> ServerChunkMap::simulateLightSource(glm::vec
     std::set<glm::vec3, vec3Comparator> affectedChunks;
     affectedChunks.insert(chunkPos);
 
-    int lightIntensity = 6;
+    int lightIntensity = 11;
     std::map<AbsPos, int, vec3PairComparator> lightQueue;
     lightQueue[std::make_pair(chunkPos, source.position)] = lightIntensity;
 
@@ -198,7 +198,7 @@ std::set<glm::vec3, vec3Comparator> ServerChunkMap::simulateLightSource(glm::vec
                         block = Server::getInstance().chunks[lightChunk]->getBlock(lightPos);
                         affectedChunks.insert(lightChunk);
                         if (setarrays != NONE) {
-                            if (setarrays == ADD) { Server::getInstance().chunks[lightChunk]->lightSources[std::make_pair(chunkPos, source.position)] = 5; }
+                            if (setarrays == ADD) { Server::getInstance().chunks[lightChunk]->lightSources[std::make_pair(chunkPos, source.position)] = 10; }
                             else if (setarrays == REMOVE) { Server::getInstance().chunks[lightChunk]->lightSources.erase(std::make_pair(chunkPos, source.position)); }
                         }
                     }
@@ -221,7 +221,7 @@ std::set<glm::vec3, vec3Comparator> ServerChunkMap::simulateLightSource(glm::vec
 void ServerChunkMap::checkLights(glm::vec3 chunkPos) {
     std::map<AbsPos, int, vec3PairComparator> lightResult;
 
-    int lightIntensity = 5;
+    int lightIntensity = 10;
     std::map<AbsPos, int, vec3PairComparator> lightQueue;
 
     for (auto& l : lightSources) {
@@ -300,7 +300,7 @@ void ServerChunkMap::resetAmbient() {
         // printf("%f %f %f block\n", b.first.x, b.first.y, b.first.z);
         if (b->id != 0) {
             for (int i = 0; i < 6; i++) {
-                b->lightLevels[i].y = -5;
+                b->lightLevels[i].y = -10;
             }
         }
     }
@@ -314,7 +314,7 @@ std::set<glm::vec3, vec3Comparator> ServerChunkMap::simulateAmbientSource(glm::v
     std::map<AbsPos, int, vec3PairComparator> lightQueue;
     lightQueue[std::make_pair(source.first, source.second)] = lightIntensity;
 
-    while (!lightQueue.empty() && lightIntensity > -6) {
+    while (!lightQueue.empty() && lightIntensity > -11) {
         std::map<AbsPos, int, vec3PairComparator> tempQueue;
         for (auto& l : lightQueue) {
             for (int side = 0; side < 6; side++) {
@@ -373,7 +373,7 @@ void ServerChunkMap::checkAmbient(glm::vec3 chunkPos) {
         }
     }
 
-    while (!lightQueue.empty() && lightIntensity > -5) {
+    while (!lightQueue.empty() && lightIntensity > -10) {
         std::map<AbsPos, int, vec3PairComparator> tempQueue;
         for (auto& l : lightQueue) {
             for (int side = 0; side < 6; side++) {
