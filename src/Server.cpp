@@ -160,9 +160,9 @@ void Server::start() {
         while (true) {
             std::set<glm::vec3, vec3Comparator> activeRegions;
             for (auto& entity : Server::getInstance().entities) {
-                for (int x = -1; x <= 1; x++) {
-                    for (int y = -1; y <= 1; y++) {
-                        for (int z = -1; z <= 1; z++) {
+                for (int x = -2; x <= 2; x++) {
+                    for (int y = -2; y <= 2; y++) {
+                        for (int z = -2; z <= 2; z++) {
                             activeRegions.insert(glm::vec3(floor(floor(entity.second->position.x / 8.0f) / 8.0f) + (float)x, floor(floor(entity.second->position.y / 8.0f) / 8.0f) + (float)y, floor(floor(entity.second->position.z / 8.0f) / 8.0f) + (float)z));
                         }
                     }
