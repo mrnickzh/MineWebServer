@@ -93,7 +93,7 @@ void Server::start() {
                     Server::getInstance().sendPacket(s.first, &lightpacket);
                 }
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            std::this_thread::sleep_for(std::chrono::milliseconds(25));
         }
     });
     lightthread.detach();
