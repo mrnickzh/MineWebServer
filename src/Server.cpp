@@ -74,7 +74,8 @@ void Server::start() {
 
                 lightUpdateQueue.pop_front();
             }
-            // std::cout << updatedChunks.size() << " size" << std::endl;
+            // std::cout << L_updatedChunks.size() << " L size" << std::endl;
+            // std::cout << A_updatedChunks.size() << " A size" << std::endl;
             for (auto c : L_updatedChunks) {
                 Server::getInstance().chunks[c]->resetLights();
                 Server::getInstance().chunks[c]->checkLights(c);
@@ -85,6 +86,7 @@ void Server::start() {
                 Server::getInstance().chunks[c]->checkAmbient(c);
                 updatedChunks.insert(c);
             }
+            // std::cout << updatedChunks.size() << " size" << std::endl;
             for (auto c : updatedChunks) {
                 // printf("%f %f %f chunk\n", c.x, c.y, c.z);
                 LightMapServer lightpacket;
@@ -93,7 +95,7 @@ void Server::start() {
                     Server::getInstance().sendPacket(s.first, &lightpacket);
                 }
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(25));
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
     });
     lightthread.detach();
