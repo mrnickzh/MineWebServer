@@ -22,3 +22,40 @@ struct vec3PairComparator {
         return std::tie(a.first.x, a.first.y, a.first.z, a.second.x, a.second.y, a.second.z) < std::tie(b.first.x, b.first.y, b.first.z, b.second.x, b.second.y, b.second.z);
     }
 };
+
+struct vec3Equals {
+    bool operator()(const glm::vec3& a, const glm::vec3& b) const {
+        return a.x == b.x && a.y == b.y && a.z == b.z;
+    }
+};
+
+struct vec3PairEquals {
+    bool operator()(const std::pair<glm::vec3, glm::vec3>& a, const std::pair<glm::vec3, glm::vec3>& b) const {
+        return a.first.x == b.first.x && a.first.y == b.first.y && a.first.z == b.first.z && a.second.x == b.second.x && a.second.y == b.second.y && a.second.z == b.second.z;
+    }
+};
+
+template <typename T>
+struct vec3Hash {
+    std::size_t operator()(const glm::vec3& a) const {
+        std::size_t res = 17;
+        res = res * 31 + std::hash<T>()( a.x );
+        res = res * 31 + std::hash<T>()( a.y );
+        res = res * 31 + std::hash<T>()( a.z );
+        return res;
+    }
+};
+
+template <typename T>
+struct vec3PairHash {
+    std::size_t operator()(const std::pair<glm::vec3, glm::vec3>& a) const {
+        std::size_t res = 17;
+        res = res * 31 + std::hash<T>()( a.first.x );
+        res = res * 31 + std::hash<T>()( a.first.y );
+        res = res * 31 + std::hash<T>()( a.first.z );
+        res = res * 31 + std::hash<T>()( a.second.x );
+        res = res * 31 + std::hash<T>()( a.second.y );
+        res = res * 31 + std::hash<T>()( a.second.z );
+        return res;
+    }
+};
