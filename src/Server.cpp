@@ -50,6 +50,12 @@ void Server::start() {
                 lightUpdateQueue.push_back(tempLightQueue.front());
                 tempLightQueue.pop_front();
             }
+
+            // std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+            if (lightUpdateQueue.empty()) {
+                continue;
+            }
+
             while (!lightUpdateQueue.empty()) {
                 std::lock_guard<std::mutex> guard(lightUpdateQueueMutex);
                 std::pair<glm::vec3, Block> lightChunk = lightUpdateQueue.front();
@@ -74,18 +80,26 @@ void Server::start() {
 
                 lightUpdateQueue.pop_front();
             }
+            // std::cout << "simulation = " << std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - begin).count() << "[µs]" << std::endl;
+            // begin = std::chrono::steady_clock::now();
             // std::cout << L_updatedChunks.size() << " L size" << std::endl;
             // std::cout << A_updatedChunks.size() << " A size" << std::endl;
+            // begin = std::chrono::steady_clock::now();
             for (auto c : L_updatedChunks) {
                 Server::getInstance().chunks[c]->resetLights();
                 Server::getInstance().chunks[c]->checkLights(c);
                 updatedChunks.insert(c);
             }
+            // std::cout << "calculation lgt = " << std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - begin).count() << "[µs]" << std::endl;
+            // begin = std::chrono::steady_clock::now();
             for (auto c : A_updatedChunks) {
                 Server::getInstance().chunks[c]->resetAmbient();
                 Server::getInstance().chunks[c]->checkAmbient(c);
                 updatedChunks.insert(c);
             }
+            // std::cout << "calculation amb = " << std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - begin).count() << "[µs]" << std::endl;
+            // std::cout << "calculation = " << std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - begin).count() << "[µs]" << std::endl;
+            // begin = std::chrono::steady_clock::now();
             // std::cout << updatedChunks.size() << " size" << std::endl;
             for (auto c : updatedChunks) {
                 // printf("%f %f %f chunk\n", c.x, c.y, c.z);
@@ -95,6 +109,7 @@ void Server::start() {
                     Server::getInstance().sendPacket(s.first, &lightpacket);
                 }
             }
+            // std::cout << "sending = " << std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - begin).count() << "[µs]" << std::endl;
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
     });
