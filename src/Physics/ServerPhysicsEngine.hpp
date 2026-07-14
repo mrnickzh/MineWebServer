@@ -11,18 +11,18 @@ struct ServerRaycastResult {
     float distance;
     glm::vec3 blockpos;
     glm::vec3 chunkpos;
-    std::shared_ptr<Block> object;
+    Block* object;
     glm::vec3 prevblockpos;
     glm::vec3 prevchunkpos;
-    std::shared_ptr<Block> prevobject;
+    Block* prevobject;
 };
 
 class ServerPhysicsEngine {
 public:
-    std::map<glm::vec3, std::vector<std::shared_ptr<ServerPhysicsObject>>, vec3Comparator> registeredObjects;
-    std::map<glm::vec3, std::shared_ptr<ServerChunkMap>, vec3Comparator>* chunkmap;
+    std::unordered_map<glm::vec3, std::vector<std::shared_ptr<ServerPhysicsObject>>, vec3Hash<float>, vec3Equals> registeredObjects;
+    std::unordered_map<glm::vec3, std::shared_ptr<ServerChunkMap>, vec3Hash<float>, vec3Equals>* chunkmap;
 
-    ServerPhysicsEngine(std::map<glm::vec3, std::shared_ptr<ServerChunkMap>, vec3Comparator>* worldmap);
+    ServerPhysicsEngine(std::unordered_map<glm::vec3, std::shared_ptr<ServerChunkMap>, vec3Hash<float>, vec3Equals>* worldmap);
     void registerObject(std::shared_ptr<ServerEntity> object, float mass);
     void unregisterObject(std::shared_ptr<ServerEntity> object);
     void addVelocityRotation(std::shared_ptr<ServerEntity> object, glm::vec3 velocity);

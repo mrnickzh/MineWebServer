@@ -43,7 +43,7 @@ class GenerateChunkServer : public ServerPacket {
         for (int x = 0; x < 8; x++) {
             for (int y = 0; y < 8; y++) {
                 for (int z = 0; z < 8; z++) {
-                    std::shared_ptr<Block> block = chunkMap->getBlock(glm::vec3((float)x, (float)y, (float)z));
+                    Block* block = chunkMap->getBlock(glm::vec3((float)x, (float)y, (float)z));
                     buffer.writeInt(block->id);
                     buffer.writeFloat(block->position.x);
                     buffer.writeFloat(block->position.y);

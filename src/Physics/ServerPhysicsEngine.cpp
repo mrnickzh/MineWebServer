@@ -7,7 +7,7 @@
 #include "../Utils/ServerGetAABB.hpp"
 #include "Utils/ServerChunkMap.hpp"
 
-ServerPhysicsEngine::ServerPhysicsEngine(std::map<glm::vec3, std::shared_ptr<ServerChunkMap>, vec3Comparator>* worldmap) {
+ServerPhysicsEngine::ServerPhysicsEngine(std::unordered_map<glm::vec3, std::shared_ptr<ServerChunkMap>, vec3Hash<float>, vec3Equals>* worldmap) {
     chunkmap = worldmap;
 }
 
@@ -99,7 +99,7 @@ std::vector<Block> ServerPhysicsEngine::possibleObstacles(glm::vec3 position) {
                 if (k < 0) { collisionChunkZ.z -= 1.0f; collisionChunkBlockZ.z += 8.0f; }
                 if (k > 7) { collisionChunkZ.z += 1.0f; collisionChunkBlockZ.z -= 8.0f; }
                 if ((*chunkmap).find(collisionChunkZ) == (*chunkmap).end()) { return obstacles; }
-                std::shared_ptr<Block> realblock = (*chunkmap)[collisionChunkZ]->getBlock(collisionChunkBlockZ);
+                Block* realblock = (*chunkmap)[collisionChunkZ]->getBlock(collisionChunkBlockZ);
                 glm::vec3 abspos = glm::vec3(realblock->position.x + (collisionChunkZ.x * 8.0f), realblock->position.y + (collisionChunkZ.y * 8.0f), realblock->position.z + (collisionChunkZ.z * 8.0f));
                 obstacles.push_back(Block(realblock->id, abspos, realblock->rotation, realblock->cancollide, realblock->collider));
                 // std::cout << collisionChunkZ.x << ", " << collisionChunkZ.y << ", " << collisionChunkZ.z << ", " << collisionChunkBlockZ.x << ", " << collisionChunkBlockZ.y << ", " << collisionChunkBlockZ.z << std::endl;
@@ -376,7 +376,7 @@ ServerRaycastResult ServerPhysicsEngine::raycast(float length, glm::vec3 startpo
         // std::cout << collisionChunkBlock.x << ", " << collisionChunkBlock.y << ", " << collisionChunkBlock.z << std::endl;
         // std::cout << position.x << " " << position.y << " " << position.z << std::endl;
         if ((*chunkmap).find(collisionChunk) != (*chunkmap).end()) {
-            std::shared_ptr<Block> object2 = (*chunkmap)[collisionChunk]->getBlock(collisionChunkBlock);
+            Block* object2 = (*chunkmap)[collisionChunk]->getBlock(collisionChunkBlock);
             // std::cout << object2->position.x << " " << object2->position.y << " " << object2->position.z << " " << object2->cancollide << std::endl;
             if (object2->cancollide) {
                 result.hit = true;

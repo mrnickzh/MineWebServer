@@ -17,13 +17,13 @@ bool ServerChunkMap::checkValidPos(glm::vec3 pos) {
     return false;
 }
 
-void ServerChunkMap::addBlock(glm::vec3 blockPos, std::shared_ptr<Block> block) {
+void ServerChunkMap::addBlock(glm::vec3 blockPos, Block block) {
     blocks[(int)(blockPos.x * 64 + blockPos.y * 8 + blockPos.z)] = block;
 }
 
-std::shared_ptr<Block> ServerChunkMap::getBlock(glm::vec3 blockPos) {
+Block* ServerChunkMap::getBlock(glm::vec3 blockPos) {
     // if (!checkValidPos(blockPos)) { printf("%f %f %f bad\n", blockPos.x, blockPos.y, blockPos.z); }
-    return blocks[(int)(blockPos.x * 64 + blockPos.y * 8 + blockPos.z)];
+    return &blocks[(int)(blockPos.x * 64 + blockPos.y * 8 + blockPos.z)];
 }
 
 void ServerChunkMap::generateOres(glm::vec3 chunkPos,  int oreBlockId, int clusterCount, int clusterSize, int minY, int maxY) {
@@ -53,7 +53,7 @@ void ServerChunkMap::generateOres(glm::vec3 chunkPos,  int oreBlockId, int clust
             auto it = getBlock(pos);
 
             if(it->id != 1) continue;
-            addBlock(pos, std::make_shared<Block>(oreBlockId, pos, glm::vec3(0.0f, 0.0f, 0.0f), true, glm::vec3(0.5f, 0.5f, 0.5f)));
+            addBlock(pos, Block(oreBlockId, pos, glm::vec3(0.0f, 0.0f, 0.0f), true, glm::vec3(0.5f, 0.5f, 0.5f)));
 
             x += ((int)(rng() % 3)) - 1;
             y += ((int)(rng() % 3)) - 1;
@@ -70,7 +70,7 @@ void ServerChunkMap::generate(glm::vec3 chunkPos) {
             for (int y = 0; y < 8; y++) {
                 for (int z = 0; z < 8; z++) {
                     glm::vec3 blockPos = glm::vec3((float) x, (float) y, (float) z);
-                    std::shared_ptr<Block> block = std::make_shared<Block>(0, blockPos, glm::vec3(0.0f, 0.0f, 0.0f), false, glm::vec3(0.5f, 0.5f, 0.5f));
+                    Block block = Block(0, blockPos, glm::vec3(0.0f, 0.0f, 0.0f), false, glm::vec3(0.5f, 0.5f, 0.5f));
                     addBlock(blockPos, block);
                 }
             }
@@ -83,7 +83,7 @@ void ServerChunkMap::generate(glm::vec3 chunkPos) {
             for (int y = 0; y < 8; y++) {
                 for (int z = 0; z < 8; z++) {
                     glm::vec3 blockPos = glm::vec3((float) x, (float) y, (float) z);
-                    std::shared_ptr<Block> block = std::make_shared<Block>(1, blockPos, glm::vec3(0.0f, 0.0f, 0.0f), true, glm::vec3(0.5f, 0.5f, 0.5f));
+                    Block block = Block(1, blockPos, glm::vec3(0.0f, 0.0f, 0.0f), true, glm::vec3(0.5f, 0.5f, 0.5f));
                     addBlock(blockPos, block);
                 }
             }
@@ -111,7 +111,7 @@ void ServerChunkMap::generate(glm::vec3 chunkPos) {
                         // if (chunkPos.x == 0.0f && chunkPos.z == 0.0f && x == 0 && z == 0) { std::cout << ambientPos.y << ", " << y << std::endl; }
                         HeightMap::getInstance().addSource(glm::vec2(chunkPos.x, chunkPos.z), height, ambientPos);
                     }
-                    std::shared_ptr<Block> block = std::make_shared<Block>(id, blockPos, glm::vec3(0.0f, 0.0f, 0.0f), (id == 0 ? false : true), glm::vec3(0.5f, 0.5f, 0.5f));
+                    Block block = Block(id, blockPos, glm::vec3(0.0f, 0.0f, 0.0f), (id == 0 ? false : true), glm::vec3(0.5f, 0.5f, 0.5f));
                     addBlock(blockPos, block);
                 }
             }
@@ -130,7 +130,7 @@ void ServerChunkMap::generate(glm::vec3 chunkPos) {
                 float k = (Server::getInstance().seedMap->perlinNoiseCaves->generate3D((float)wx, (float)wy, (float)wz, 0.02f) + 1.0f) / 2.0f;
 
                 if (k > 0.6f) {
-                    addBlock(blockPos, std::make_shared<Block>(0, blockPos, glm::vec3(0.0f, 0.0f, 0.0f), false, glm::vec3(0.5f, 0.5f, 0.5f)));
+                    addBlock(blockPos, Block(0, blockPos, glm::vec3(0.0f, 0.0f, 0.0f), false, glm::vec3(0.5f, 0.5f, 0.5f)));
                     checkHeight(chunkPos, blockPos);
                 }
             }
@@ -160,9 +160,9 @@ void ServerChunkMap::generate(glm::vec3 chunkPos) {
 void ServerChunkMap::resetLights() {
     for (auto& b : blocks) {
         // printf("%f %f %f block\n", b.first.x, b.first.y, b.first.z);
-        if (b->id != 0) {
+        if (b.id != 0) {
             for (int i = 0; i < 6; i++) {
-                b->lightLevels[i].x = 0;
+                b.lightLevels[i].x = 0;
             }
         }
     }
@@ -185,7 +185,7 @@ std::set<glm::vec3, vec3Comparator> ServerChunkMap::simulateLightSource(glm::vec
                 {
                     glm::vec3 lightPos = glm::vec3(l.first.second.x + (float)direction[0] - (float)direction[1], l.first.second.y + (float)direction[2] - (float)direction[3], l.first.second.z + (float)direction[4] - (float)direction[5]);
                     glm::vec3 lightChunk = l.first.first;
-                    std::shared_ptr<Block> block = nullptr;
+                    Block* block = nullptr;
                     bool swappedChunk = false;
                     if (lightPos.x < 0.0f) { lightPos.x = 7.0f; lightChunk.x -= 1.0f; swappedChunk = true; }
                     if (lightPos.x > 7.0f) { lightPos.x = 0.0f; lightChunk.x += 1.0f; swappedChunk = true; }
@@ -237,7 +237,7 @@ void ServerChunkMap::checkLights(glm::vec3 chunkPos) {
                 {
                     glm::vec3 lightPos = glm::vec3(l.first.second.x + (float)direction[0] - (float)direction[1], l.first.second.y + (float)direction[2] - (float)direction[3], l.first.second.z + (float)direction[4] - (float)direction[5]);
                     glm::vec3 lightChunk = l.first.first;
-                    std::shared_ptr<Block> block = nullptr;
+                    Block* block = nullptr;
                     bool swappedChunk = false;
                     if (lightPos.x < 0.0f) { lightPos.x = 7.0f; lightChunk.x -= 1.0f; swappedChunk = true; }
                     if (lightPos.x > 7.0f) { lightPos.x = 0.0f; lightChunk.x += 1.0f; swappedChunk = true; }
@@ -274,7 +274,7 @@ void ServerChunkMap::checkLights(glm::vec3 chunkPos) {
             {
                 glm::vec3 lightPos = glm::vec3(l.first.second.x + (float)direction[0] - (float)direction[1], l.first.second.y + (float)direction[2] - (float)direction[3], l.first.second.z + (float)direction[4] - (float)direction[5]);
                 glm::vec3 lightChunk = l.first.first;
-                std::shared_ptr<Block> block = nullptr;
+                Block* block = nullptr;
 
                 if (lightPos.x < 0.0f) { lightPos.x = 7.0f; lightChunk.x -= 1.0f; }
                 if (lightPos.x > 7.0f) { lightPos.x = 0.0f; lightChunk.x += 1.0f; }
@@ -298,9 +298,9 @@ void ServerChunkMap::checkLights(glm::vec3 chunkPos) {
 void ServerChunkMap::resetAmbient() {
     for (auto& b : blocks) {
         // printf("%f %f %f block\n", b.first.x, b.first.y, b.first.z);
-        if (b->id != 0) {
+        if (b.id != 0) {
             for (int i = 0; i < 6; i++) {
-                b->lightLevels[i].y = -10;
+                b.lightLevels[i].y = -10;
             }
         }
     }
@@ -323,7 +323,7 @@ std::set<glm::vec3, vec3Comparator> ServerChunkMap::simulateAmbientSource(glm::v
                 {
                     glm::vec3 lightPos = glm::vec3(l.first.second.x + (float)direction[0] - (float)direction[1], l.first.second.y + (float)direction[2] - (float)direction[3], l.first.second.z + (float)direction[4] - (float)direction[5]);
                     glm::vec3 lightChunk = l.first.first;
-                    std::shared_ptr<Block> block = nullptr;
+                    Block* block = nullptr;
                     bool swappedChunk = false;
                     if (lightPos.x < 0.0f) { lightPos.x = 7.0f; lightChunk.x -= 1.0f; swappedChunk = true; }
                     if (lightPos.x > 7.0f) { lightPos.x = 0.0f; lightChunk.x += 1.0f; swappedChunk = true; }
@@ -357,6 +357,7 @@ std::set<glm::vec3, vec3Comparator> ServerChunkMap::simulateAmbientSource(glm::v
 }
 
 void ServerChunkMap::checkAmbient(glm::vec3 chunkPos) {
+    int blockside[6] = {2, 3, 4, 5, 0, 1};
     std::unordered_map<AbsPos, int, vec3PairHash<float>, vec3PairEquals> lightResult;
 
     int lightIntensity = 0;
@@ -373,16 +374,19 @@ void ServerChunkMap::checkAmbient(glm::vec3 chunkPos) {
         }
     }
 
+    // std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+    // int ch = 0;
+
     while (!lightQueue.empty() && lightIntensity > -10) {
         std::unordered_map<AbsPos, int, vec3PairHash<float>, vec3PairEquals> tempQueue;
         for (auto& l : lightQueue) {
             for (int side = 0; side < 6; side++) {
-                int direction[6] = {0, 0, 0, 0, 0, 0};
-                direction[side] = 1;
+                float direction[6] = {0, 0, 0, 0, 0, 0};
+                direction[side] = 1.0f;
                 {
-                    glm::vec3 lightPos = glm::vec3(l.first.second.x + (float)direction[0] - (float)direction[1], l.first.second.y + (float)direction[2] - (float)direction[3], l.first.second.z + (float)direction[4] - (float)direction[5]);
+                    glm::vec3 lightPos = glm::vec3(l.first.second.x + direction[0] - direction[1], l.first.second.y + direction[2] - direction[3], l.first.second.z + direction[4] - direction[5]);
                     glm::vec3 lightChunk = l.first.first;
-                    std::shared_ptr<Block> block = nullptr;
+                    Block* block = nullptr;
                     bool swappedChunk = false;
                     if (lightPos.x < 0.0f) { lightPos.x = 7.0f; lightChunk.x -= 1.0f; swappedChunk = true; }
                     if (lightPos.x > 7.0f) { lightPos.x = 0.0f; lightChunk.x += 1.0f; swappedChunk = true; }
@@ -412,21 +416,24 @@ void ServerChunkMap::checkAmbient(glm::vec3 chunkPos) {
                         }
                     }
                 }
+                // ch++;
             }
         }
         lightIntensity -= 1;
         lightQueue = tempQueue;
     }
+    //
+    // std::cout << "calculation = " << std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - begin).count() << "[µs]" << std::endl;
+    // std::cout << ch << " iterations" << std::endl;
 
     for (auto& l : lightResult) {
         for (int side = 0; side < 6; side++) {
-            int direction[6] = {0, 0, 0, 0, 0, 0};
-            int blockside[6] = {2, 3, 4, 5, 0, 1};
-            direction[side] = 1;
+            float direction[6] = {0, 0, 0, 0, 0, 0};
+            direction[side] = 1.0f;
             {
-                glm::vec3 lightPos = glm::vec3(l.first.second.x + (float)direction[0] - (float)direction[1], l.first.second.y + (float)direction[2] - (float)direction[3], l.first.second.z + (float)direction[4] - (float)direction[5]);
+                glm::vec3 lightPos = glm::vec3(l.first.second.x + direction[0] - direction[1], l.first.second.y + direction[2] - direction[3], l.first.second.z + direction[4] - direction[5]);
                 glm::vec3 lightChunk = l.first.first;
-                std::shared_ptr<Block> block = nullptr;
+                Block* block = nullptr;
 
                 if (lightPos.x < 0.0f) { lightPos.x = 7.0f; lightChunk.x -= 1.0f; }
                 if (lightPos.x > 7.0f) { lightPos.x = 0.0f; lightChunk.x += 1.0f; }

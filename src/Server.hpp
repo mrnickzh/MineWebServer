@@ -60,7 +60,7 @@ public:
     std::function<void(ClientSession*, std::vector<uint8_t>)> callback;
     std::map<ClientSession*, void*> clients;
 
-    std::map<glm::vec3, std::shared_ptr<ServerChunkMap>, vec3Comparator> chunks;
+    std::unordered_map<glm::vec3, std::shared_ptr<ServerChunkMap>, vec3Hash<float>, vec3Equals> chunks;
     std::map<std::string, std::shared_ptr<ServerEntity>> entities;
 
     std::mutex chunksMutex;

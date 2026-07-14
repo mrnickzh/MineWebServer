@@ -33,11 +33,11 @@ void RegionFormat_V1::load(ByteBuf &buffer, glm::vec3 pos) {
                 realid = Server::getInstance().serverModManager->mods[mod]->modBlocks[id];
             }
             glm::vec3 blockPos = glm::vec3(bx, by, bz);
-            std::shared_ptr<Block> block = std::make_shared<Block>(realid, blockPos, glm::vec3(0.0f, 0.0f, 0.0f), (realid == 0 ? false : true), glm::vec3(0.5f, 0.5f, 0.5f));
+            Block block = Block(realid, blockPos, glm::vec3(0.0f, 0.0f, 0.0f), (realid == 0 ? false : true), glm::vec3(0.5f, 0.5f, 0.5f));
 
             for (int l = 0; l < 6; l++) {
-                block->lightLevels[l].x = buffer.readInt();
-                block->lightLevels[l].y = buffer.readInt();
+                block.lightLevels[l].x = buffer.readInt();
+                block.lightLevels[l].y = buffer.readInt();
             }
 
             chunkMap->addBlock(blockPos, block);
@@ -113,15 +113,15 @@ void RegionFormat_V1::save(ByteBuf &buffer, glm::vec3 pos) {
                 buffer.writeFloat(regionChunk.y);
                 buffer.writeFloat(regionChunk.z);
                 for(auto& blockPair : map->blocks){
-                    buffer.writeFloat(blockPair->position.x);
-                    buffer.writeFloat(blockPair->position.y);
-                    buffer.writeFloat(blockPair->position.z);
-                    std::pair<std::string, std::string> blockMod = Server::getInstance().serverBlockRegistry->getBlock(blockPair->id).first;
+                    buffer.writeFloat(blockPair.position.x);
+                    buffer.writeFloat(blockPair.position.y);
+                    buffer.writeFloat(blockPair.position.z);
+                    std::pair<std::string, std::string> blockMod = Server::getInstance().serverBlockRegistry->getBlock(blockPair.id).first;
                     buffer.writeString(blockMod.first);
                     buffer.writeString(blockMod.second);
                     for (int l = 0; l < 6; l++) {
-                        buffer.writeInt(blockPair->lightLevels[l].x);
-                        buffer.writeInt(blockPair->lightLevels[l].y);
+                        buffer.writeInt(blockPair.lightLevels[l].x);
+                        buffer.writeInt(blockPair.lightLevels[l].y);
                     }
                 }
 

@@ -16,5 +16,6 @@ public:
     int lightlevel = 0;
 
     Block(int id, glm::vec3 position, glm::vec3 rotation, bool cancollide, glm::vec3 collider) : id(id), position(position), rotation(rotation), cancollide(cancollide), collider(collider) {};
+    Block() : id(0), position(glm::vec3(0.0f, 0.0f, 0.0f)), rotation(glm::vec3(0.0f, 0.0f, 0.0f)), cancollide(false), collider(glm::vec3(0.5f, 0.5f, 0.5f)) {};
 };
 

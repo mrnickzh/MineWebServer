@@ -34,7 +34,7 @@ public:
         {
             std::lock_guard<std::mutex> guard(Server::getInstance().chunksMutex);
             prevblock = *(Server::getInstance().chunks[chunkpos]->getBlock(blockpos));
-            std::shared_ptr<Block> block = std::make_shared<Block>(id, blockpos, glm::vec3(0.0f, 0.0f, 0.0f), (id == 0 ? false : true), glm::vec3(0.5f, 0.5f, 0.5f));
+            Block block = Block(id, blockpos, glm::vec3(0.0f, 0.0f, 0.0f), (id == 0 ? false : true), glm::vec3(0.5f, 0.5f, 0.5f));
             Server::getInstance().chunks[chunkpos]->addBlock(blockpos, block);
 
             std::string modName = Server::getInstance().serverBlockRegistry->getBlock(id).first.first;

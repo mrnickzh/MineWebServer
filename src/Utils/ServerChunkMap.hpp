@@ -19,14 +19,14 @@ enum SetArrType {
 class ServerChunkMap {
 public:
     // std::map<glm::vec3, std::shared_ptr<Block>> blocks;
-    std::array<std::shared_ptr<Block>, 512> blocks;
+    std::array<Block, 512> blocks{};
 
     std::map<AbsPos, int, vec3PairComparator> lightSources;
     std::map<AbsPos, int, vec3PairComparator> ambientSources;
 
     bool checkValidPos(glm::vec3 pos);
-    void addBlock(glm::vec3 blockPos, std::shared_ptr<Block> block);
-    std::shared_ptr<Block> getBlock(glm::vec3 blockPos);
+    void addBlock(glm::vec3 blockPos, Block block);
+    Block* getBlock(glm::vec3 blockPos);
     void generate(glm::vec3 chunkPos);
     void generateOres(glm::vec3 chunkPos, int oreBlockId, int clusterCount, int clusterSize, int minY, int maxY);
     std::set<glm::vec3, vec3Comparator> simulateLightSource(glm::vec3 chunkPos, Block source, bool collision, int setarrays);
