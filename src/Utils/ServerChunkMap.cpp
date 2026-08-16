@@ -29,10 +29,10 @@ Block* ServerChunkMap::getBlock(glm::vec3 blockPos) {
 void ServerChunkMap::generateOres(glm::vec3 chunkPos,  int oreBlockId, int clusterCount, int clusterSize, int minY, int maxY) {
     uint64_t seed =
             Server::getInstance().seedMap->seedOres
-            ^ (uint64_t(chunkPos.x) * 341873128712ULL)
-            ^ (uint64_t(chunkPos.z) * 132897987541ULL)
-            ^ (uint64_t(chunkPos.y) * 42317861ULL)
-            ^ (uint64_t(oreBlockId) * 31ULL);
+            ^ (int64_t(chunkPos.x) * 341873128712ULL)
+            ^ (int64_t(chunkPos.z) * 132897987541ULL)
+            ^ (int64_t(chunkPos.y) * 42317861ULL)
+            ^ (int64_t(oreBlockId) * 31ULL);
     std::mt19937 rng(seed);
 
     for (int i = 0; i < clusterCount; i++) {
