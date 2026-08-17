@@ -158,12 +158,17 @@ void Server::start() {
 #ifndef BUILD_TYPE_DEDICATED
     std::thread packetthread([&]() {
         while (true) {
-            // std::cout << serverPacketQueue.size() << " queue" << std::endl;
             while (!serverPacketQueue.empty()) {
                 std::lock_guard<std::mutex> guard(serverPacketQueueMutex);
                 std::pair<ClientSession*, std::vector<uint8_t>> packet = serverPacketQueue.front();
                 ServerPacketHelper::decodePacket(packet.first, packet.second);
                 serverPacketQueue.pop_front();
+            }
+            while (!serverFallbackPacketQueue.empty()) {
+                std::lock_guard<std::mutex> guard(serverFallbackPacketQueueMutex);
+                std::pair<ClientSession*, std::vector<uint8_t>> packet = serverFallbackPacketQueue.front();
+                ServerPacketHelper::decodePacket(packet.first, packet.second);
+                serverFallbackPacketQueue.pop_front();
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
@@ -226,15 +231,12 @@ void Server::processPacket(ClientSession* session, std::vector<uint8_t> data) {
 #ifndef BUILD_TYPE_DEDICATED
     // std::lock_guard<std::mutex> guard(serverPacketQueueMutex);
     if (serverPacketQueueMutex.try_lock()) {
-        for (auto p : serverFallbackPacketQueue) {
-            serverPacketQueue.push_back(p);
-            serverFallbackPacketQueue.pop_front();
-        }
         serverPacketQueue.push_back(std::pair<ClientSession*, std::vector<uint8_t>>(session, data));
         serverPacketQueueMutex.unlock();
     }
-    else {
+    else if (serverFallbackPacketQueueMutex.try_lock()) {
         serverFallbackPacketQueue.push_back(std::pair<ClientSession*, std::vector<uint8_t>>(session, data));
+        serverFallbackPacketQueueMutex.unlock();
     }
 #else
     ServerPacketHelper::decodePacket(session, data);

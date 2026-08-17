@@ -75,6 +75,7 @@ public:
 
 #ifndef BUILD_TYPE_DEDICATED
     std::mutex serverPacketQueueMutex;
+    std::mutex serverFallbackPacketQueueMutex;
     std::deque<std::pair<ClientSession*, std::vector<uint8_t>>> serverPacketQueue;
     std::deque<std::pair<ClientSession*, std::vector<uint8_t>>> serverFallbackPacketQueue;
 #endif

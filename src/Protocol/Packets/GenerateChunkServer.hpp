@@ -16,6 +16,7 @@ class GenerateChunkServer : public ServerPacket {
         float cy = buffer.readFloat();
         float cz = buffer.readFloat();
         chunkpos = glm::vec3(cx, cy, cz);
+        chunkpos = glm::vec3(cx, cy, cz);
     }
     void send(ByteBuf &buffer) override {
         std::shared_ptr<ServerChunkMap> chunkMap = std::make_shared<ServerChunkMap>();
