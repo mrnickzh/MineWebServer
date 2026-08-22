@@ -6,7 +6,7 @@
 
 class ServerModManager {
 public:
-    std::map<std::string, ServerMod*> mods;
+    std::unordered_map<std::string, ServerMod*> mods;
 
     ServerModManager();
     void initLoad();

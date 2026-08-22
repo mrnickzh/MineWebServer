@@ -6,6 +6,7 @@
 #include "../../../lib/glm/glm.hpp"
 #include "../../../lib/glm/gtc/matrix_transform.hpp"
 #include "../../../lib/glm/gtc/type_ptr.hpp"
+#include "Modding/ModEvents/ServerModBlockBrokenEvent.hpp"
 
 class EditChunkServer : public ServerPacket {
 public:
@@ -36,11 +37,15 @@ public:
             prevblock = *(Server::getInstance().chunks[chunkpos]->getBlock(blockpos));
             Block block = Block(id, blockpos, glm::vec3(0.0f, 0.0f, 0.0f), (id == 0 ? false : true), glm::vec3(0.5f, 0.5f, 0.5f));
             Server::getInstance().chunks[chunkpos]->addBlock(blockpos, block);
+        }
 
-            std::string modName = Server::getInstance().serverBlockRegistry->getBlock(id).first.first;
-            if (modName != "base") {
-                Server::getInstance().serverModManager->mods[modName]->doEvent("block_removed");
-            }
+        std::string modName = Server::getInstance().serverBlockRegistry->getBlock(prevblock.id).first.first;
+        if (modName != "base") {
+            ServerModBlockBrokenEvent* blockbrokenevent = new ServerModBlockBrokenEvent();
+            blockbrokenevent->x = (int)((chunkpos.x * 8.0f) + blockpos.x);
+            blockbrokenevent->y = (int)((chunkpos.y * 8.0f) + blockpos.y);
+            blockbrokenevent->z = (int)((chunkpos.z * 8.0f) + blockpos.z);
+            Server::getInstance().serverModManager->mods[modName]->doEvent(blockbrokenevent);
         }
         // A_affectedChunks = Server::getInstance().chunks[chunkpos]->checkHeight(chunkpos, blockpos);
         // L_affectedChunks = Server::getInstance().chunks[chunkpos]->checkLights(chunkpos, prevblock);

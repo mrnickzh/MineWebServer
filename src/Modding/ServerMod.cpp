@@ -1,6 +1,9 @@
 #include "ServerMod.hpp"
 
 #include "Server.hpp"
+#include "ServerModBridge.hpp"
+#include "ServerModEvent.hpp"
+#include "ModEvents/ServerModBlockBrokenEvent.hpp"
 
 #ifdef BUILD_TYPE_DEDICATED
 std::string moddir = "mods/";
@@ -42,6 +45,20 @@ void ServerMod::loadAssets() {
 
 void ServerMod::loadMainLua() {
     mainLua.open_libraries(sol::lib::base);
+    mainLua.set_function("GAME_registerEvent",
+    [this](std::string eventId, sol::protected_function func) {
+        this->registerEvent(eventId, func);
+    });
+    mainLua.set_function("GAME_setBlock", &ServerModBridge::setBlock);
+
+    mainLua.new_usertype<ServerModEvent>("ServerModEvent",
+        "cancel", &ServerModEvent::cancel
+    );
+    mainLua.new_usertype<ServerModBlockBrokenEvent>("ServerModBlockBrokenEvent",
+    sol::base_classes, sol::bases<ServerModEvent>(),
+        "cancel", &ServerModEvent::cancel,
+        "x", &ServerModBlockBrokenEvent::x, "y", &ServerModBlockBrokenEvent::y, "z", &ServerModBlockBrokenEvent::z
+    );
 
     std::ifstream file(moddir + modName + "/server/main.lua");
     std::stringstream script;
@@ -50,14 +67,8 @@ void ServerMod::loadMainLua() {
     mainLua.script(script.str());
 }
 
-void ServerMod::doEvent(std::string event) {
-    std::cout << event << std::endl;
-    sol::protected_function func = mainLua[event];
-    sol::protected_function_result result = func();
-    if (!result.valid()) {
-        sol::error err = result;
-        std::cerr << "Error: " << err.what() << std::endl;
-    }
+void ServerMod::registerEvent(std::string eventId, sol::protected_function func) {
+    modEvents[eventId] = func;
 }
 
 
